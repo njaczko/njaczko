@@ -1,0 +1,15 @@
+{
+    "diagnostic.locationlist": false,
+    "diagnostic.displayByALE": true,
+     "languageserver": {
+        "golang": {
+          "command": "gopls",
+          "disableDiagnostics": true,
+          "rootPatterns": ["go.mod", ".vim/", ".git/", ".hg/"],
+          "filetypes": ["go"],
+          "initializationOptions": {
+            "usePlaceholders": true
+          }
+        }
+      }
+}
