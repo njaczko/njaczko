@@ -1,0 +1,11 @@
+#! /bin/bash
+
+LOG_FILE=/tmp/$(openssl rand -hex 10)
+ARBITRARY_FILE_TO_OPEN=/tmp/$(openssl rand -hex 10)
+
+rm -f $LOG_FILE
+
+nvim $ARBITRARY_FILE_TO_OPEN --startuptime $LOG_FILE -c 'q'
+VIM_STARTUP_LOG_FILE=$LOG_FILE ./_time-vim-startup.rb
+
+rm  $LOG_FILE
