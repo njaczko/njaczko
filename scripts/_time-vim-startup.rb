@@ -1,6 +1,11 @@
 #! /usr/bin/env ruby
 # frozen_string_literal: true
 
+# This script is intended to be called by the time-vim-startup Bash wrapper.
+# Neovim start up time is slightly different depending on how nvim is invoked.
+# Opening Neovim from a bash script instead of a ruby script produces times that
+# are closer to normal  nvim usage.
+
 class ErrInvalidLogFile < StandardError
 end
 
@@ -10,7 +15,7 @@ end
 def main
   path_to_log_file = ENV['VIM_STARTUP_LOG_FILE']
   unless path_to_log_file
-    puts 'VIM_STARTUP_LOG_FILE env var is required. This script should be called by the time-vim-startup wrapper script?'
+    puts 'VIM_STARTUP_LOG_FILE env var is required. This script should be called by the time-vim-startup wrapper script, which passes this variable.'
     return
   end
   parsed_log = StartupLog.new(path_to_log_file)
@@ -20,8 +25,8 @@ def main
     return
   end
 
-  puts "Total Startup Time (ms): #{parsed_log.total_startup_time}"
-  puts 'Most expensive:'
+  puts "Total startup time (ms): #{parsed_log.total_startup_time}"
+  puts 'Most expensive startup operations:'
   parsed_log.most_expensive.each do |l|
     puts "(#{l.elapsed}ms) #{l.description}"
   end
