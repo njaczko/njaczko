@@ -1,11 +1,23 @@
 #! /bin/bash
 
+# This script is a light wrapper around the _time-vim-startup.rb ruby script. It
+# will measure the amount of time it takes for Neovim to startup, which is
+# helpful for evaluating the impact of Neovim configuration changes on startup
+# time. It will also print a list of the startup operations that took the most
+# time.
+#
+# Example usage:
+#   ./time-vim-startup
+
+# random log file
 LOG_FILE=/tmp/$(openssl rand -hex 10)
 ARBITRARY_FILE_TO_OPEN=/tmp/$(openssl rand -hex 10)
 
-rm -f $LOG_FILE
-
-nvim $ARBITRARY_FILE_TO_OPEN --startuptime $LOG_FILE -c 'q'
+# generate the nvim startuptime log file. An important caveat: quitting nvim in
+# the -c command will exclude VimEnter and UIEnter autocommands from the time
+# evaluation. I do not have any such autocommands, so I'm willing to make this
+# tradeoff for the benefit of having this script run with no manual intervention.
+nvim "$ARBITRARY_FILE_TO_OPEN" --startuptime "$LOG_FILE" -c 'q'
 VIM_STARTUP_LOG_FILE=$LOG_FILE ./_time-vim-startup.rb
 
-rm  $LOG_FILE
+printf '\n\nThe full startuptime log can be found here: %s' "$LOG_FILE"
