@@ -1,3 +1,19 @@
 #!/bin/bash
 
-curl --silent https://www.airnowapi.org/aq/observation/zipCode/current/\?format\=application/json\&zipCode\=94612\&distance\=3\&API_KEY\=$(cat ~/code/secrets/airnow_api_key) | jq '.[] | select(.ParameterName == "PM2.5") | .AQI'
+# TODO documentation
+# Examples:
+#   ./aqi
+#   ZIPCODE=02481 ./aqi
+
+AIRNOW_API_KEY=$(cat ~/code/secrets/airnow_api_key)
+# default zip code to Oakland, CA
+ZIPCODE="${ZIPCODE:-94612}"
+
+curl --silent "https://www.airnowapi.org/aq/observation/zipCode/current/\
+?format=application/json\
+&zipCode=$ZIPCODE\
+&distance=25\
+&API_KEY=$AIRNOW_API_KEY" \
+  | jq '.[] | select(.ParameterName == "PM2.5") | .AQI'
+# TODO do we want to show O3 and PM2.5 data?
+# TODO error handling and nicer printed output
