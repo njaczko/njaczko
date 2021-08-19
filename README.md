@@ -1,7 +1,8 @@
 # Nick Jaczko's Public Monorepo
 
-This monorepo is my collection of configs, scripts, mini-projects, doodads, and
-other junk that I wanted to host _somewhere_.
+The [njaczko monorepo](https://github.com/njaczko/njaczko) is my collection of
+configs, scripts, mini-projects, doodads, and other junk that I wanted to host
+_somewhere_.
 
 ## Contact
 

@@ -1,0 +1,60 @@
+#!/bin/bash
+
+usage() {
+  cat <<EOF
+DESCRIPTION
+
+  This script fetchs air quality data from AirNow, a federal air quality
+  database. If called with no arguments, it will print the PM2.5 AQI in Oakland,
+  CA. The search location zip code can be provided in the ZIPCODE environment
+  variable. The AirNow API key can be provided via the AIRNOW_API_KEY environment
+  variable, or a special file: ~/code/secrets/airnow_api_key
+
+USAGE
+
+  [AIRNOW_API_KEY=<value>] [ZIPCODE=<value>] $0 [OPTION]
+
+OPTIONS
+
+  --pm2-5       Print the PM2.5 AQI, .
+  --o3          Print the O3 AQI.
+  --verbose     Print the full air quality report provided by AirNow.
+  --help        Print usage ('-h' and 'help' are aliases).
+
+  Only one option may be passed at at a time.
+
+DEPENDENCIES
+
+  This script requires an AirNow API key, which can be created by making an
+  account at https://docs.airnowapi.org, and jq (https://github.com/stedolan/jq).
+
+EXAMPLES
+  $0                      # Print the PM2.5 AQI in Oakland, CA.
+  $0 --o3                 # Print the O3 AQI.
+  ZIPCODE=02481 $0        # Print the PM2.5 AQI in zip code 02481.
+  AIRNOW_API_KEY=foo $0   # Use API key 'foo'
+EOF
+
+  exit "$1" ;
+}
+
+# if no options provided, default to PM2.5 AQI
+case "${1:-"--pm2-5"}" in
+  --pm2-5) JQ_QUERY='.[] | select(.ParameterName == "PM2.5") | .AQI' ;;
+  --o3) JQ_QUERY='.[] | select(.ParameterName == "O3") | .AQI' ;;
+  --verbose) JQ_QUERY='' ;;
+  help|-h|--help) usage 0 ;;
+  *) usage 1  ;;
+esac
+
+# default zip code to Oakland, CA
+ZIPCODE="${ZIPCODE:-94612}"
+AIRNOW_API_KEY="${AIRNOW_API_KEY:-$(cat ~/code/secrets/airnow_api_key)}"
+
+AIR_QUALITY_REPORT=$(curl --silent "https://www.airnowapi.org/aq/observation/zipCode/current/\
+?format=application/json\
+&zipCode=$ZIPCODE\
+&distance=25\
+&API_KEY=$AIRNOW_API_KEY")
+
+echo "$AIR_QUALITY_REPORT" | jq "$JQ_QUERY"
