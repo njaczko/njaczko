@@ -1,0 +1,16 @@
+#! /bin/bash
+
+# Inspired by the `jump` cli, this script lets us checkout git branches by a
+# fuzzy, shortened version of the branch name.
+# This script requires the `fzf` command line tool
+# TODO examples.
+
+# TODO add another feature: checkout the branch with the most recent commit! might have to use `git show` to get the edit dates?
+# git show --format='%ad'
+main() {
+  # TODO can we get FZF to give us the top match without `head`?
+  best_branch_match=$(git branch | fzf -f "$1" | head -n1)
+  git checkout "$best_branch_match"
+}
+
+main "$@"
