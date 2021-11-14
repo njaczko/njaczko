@@ -72,8 +72,6 @@ vmap < <gv
 " remap normal mode arrow keys to scroll through quickfix locations
 nnoremap <Up> :lprev<CR>
 nnoremap <Down> :lnext<CR>
-" delete folds when opening them
-nnoremap zo zD
 " base64 encode/decode selected text
 vnoremap <leader>e c<c-r>=substitute(system('base64', @"), '\n', '', '')<cr><esc>
 vnoremap <leader>d c<c-r>=system('base64 --decode', @")<cr><esc>
@@ -85,6 +83,10 @@ nnoremap <Leader>s :%s/\<<C-r><C-w>\>//g<Left><Left>
 nnoremap <Leader>S :%s/\<<C-r><C-w>\>/<C-r><C-w>/g<Left><Left>
 " :q quits all in diff mode
 if &diff | nnoremap :q<CR> :qa<CR> | endif
+" search for the visually selected text
+vnoremap <Leader>f y/\V<C-R>=escape(@",'/\')<CR><CR>
+" noh
+nmap <silent> <Leader>n :noh<CR>
 
 
 " COMMANDS #####################################################################
@@ -191,11 +193,12 @@ endfunction
 " the list or load the plugin all the time (~7-10ms).
 " easymotion search for 1 char
 nmap m <Plug>(easymotion-bd-f)
-" easymotion search for n chars
 
 " fzf
 nmap <silent> M :BLines<cr>
 nmap <silent> <c-p> :Files<CR>
+" highlight matched text in red instead of dark green
+let g:fzf_colors = { 'hl': ['fg', 'Statement'], 'hl+': ['fg', 'Statement'] }
 
 " buffers as tabs
 set hidden
@@ -221,17 +224,19 @@ let g:notes_directories = ['~/notes']
 autocmd BufNewFile,BufRead *.note,*.notes set ft=notes
 autocmd BufRead,BufNewFile ~/notes/* set ft=notes
 autocmd Filetype notes set foldmethod=manual
-" TODO make FixAllNoteLevels not move your cursor, then uncomment this autocmd
-" autocmd BufWritePost ~/notes/* call FixAllNoteLevels()
+autocmd BufWritePost ~/notes/* call FixAllNoteLevels()
 command FixNotes call FixAllNoteLevels()
 " make sure each level of indentation uses the correct bullet char
 function FixAllNoteLevels()
+  " set a mark so we can return to this location when we're done fixing
+  mark x
   silent call FixNoteLevel(0, "•")
   silent call FixNoteLevel(1, "◦")
   silent call FixNoteLevel(2, "▸")
   silent call FixNoteLevel(3, "▹")
   silent call FixNoteLevel(4, "▪")
   silent call FixNoteLevel(5, "▫")
+  normal 'x
 endfunction
 
 function FixNoteLevel(level, char)
@@ -270,6 +275,12 @@ nmap <leader>r <Plug>(coc-rename)
 
 " pgsql.vim. treat all sql files as postgres.
 let g:sql_type_default = 'pgsql'
+
+" xolox/vim-notes
+" don't highlight the names of other notes (they are still hyperlinks)
+hi notesName ctermfg=fg
+" bold is hard to distinguish from normal text. let's make it a different color
+hi notesBold ctermfg=DarkRed
 
 
 " SETTINGS AND MISCELLANEOUS ###################################################
