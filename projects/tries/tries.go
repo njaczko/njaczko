@@ -25,12 +25,13 @@ type Node struct {
 func New(patterns []string) *Trie {
 	t := &Trie{Root: &Node{}}
 	for _, p := range patterns {
-		t.AddPattern(p)
+		t.Add(p)
 	}
 	return t
 }
 
-func (t *Trie) AddPattern(pat string) error {
+// Add adds the given pattern to the trie.
+func (t *Trie) Add(pat string) {
 	currentNode := t.Root
 	for _, c := range pat {
 		nextNode := currentNode.Traverse(c)
@@ -52,27 +53,28 @@ func (t *Trie) AddPattern(pat string) error {
 	// add one more edge indicating the end of the pattern so patterns that are
 	// a prefix of another pattern in the tree also end on a leaf
 	currentNode.OutgoingEdges[EndOfPatternSentinel] = nil
-	return nil
 }
 
-func (n *Node) Traverse(edgeLabel rune) *Node {
-	return n.OutgoingEdges[edgeLabel]
-}
-
-func (t *Trie) ContainsPattern(pat string) (bool, error) {
+// Contains returns true iff the trie contains the given pattern.
+func (t *Trie) Contains(pat string) bool {
 	currentNode := t.Root
 	for _, c := range pat {
 		// consume one character and attempt to traverse one node
 		currentNode = currentNode.Traverse(c)
 		if currentNode == nil {
-			return false, nil
+			return false
 		}
 	}
 
-	// traverse the end of pattern sentinel
+	// traverse the end of pattern sentinel to make sure the trie contains this
+	// pattern, as opposed to another pattern that starts with this pattern
 	if _, ok := currentNode.OutgoingEdges[EndOfPatternSentinel]; ok {
-		return true, nil
+		return true
 	}
 
-	return false, nil
+	return false
+}
+
+func (n *Node) Traverse(edgeLabel rune) *Node {
+	return n.OutgoingEdges[edgeLabel]
 }

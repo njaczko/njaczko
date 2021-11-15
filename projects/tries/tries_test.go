@@ -42,8 +42,7 @@ var _ = gk.Describe("Tries", func() {
 		gk.It("correctly sets the outgoing edges", func() {
 			rootNode := &tries.Node{}
 			t := tries.Trie{Root: rootNode}
-			err := t.AddPattern("bar")
-			gm.Expect(err).NotTo(gm.HaveOccurred())
+			t.Add("bar")
 
 			bNode := rootNode.OutgoingEdges['b']
 			gm.Expect(bNode).NotTo(gm.BeNil())
@@ -67,26 +66,22 @@ var _ = gk.Describe("Tries", func() {
 		})
 
 		gk.It("returns false if the pattern has not been added", func() {
-			contains, err := t.ContainsPattern("baz")
-			gm.Expect(err).NotTo(gm.HaveOccurred())
+			contains := t.Contains("baz")
 			gm.Expect(contains).To(gm.BeFalse())
 		})
 
 		gk.It("returns true if the pattern has been added", func() {
-			contains, err := t.ContainsPattern("foo")
-			gm.Expect(err).NotTo(gm.HaveOccurred())
+			contains := t.Contains("foo")
 			gm.Expect(contains).To(gm.BeTrue())
 		})
 
 		gk.It("returns true if the pattern is a substring of another pattern", func() {
-			contains, err := t.ContainsPattern("bar")
-			gm.Expect(err).NotTo(gm.HaveOccurred())
+			contains := t.Contains("bar")
 			gm.Expect(contains).To(gm.BeTrue())
 		})
 
 		gk.It("returns false if pattern has not been added, but is a substring of another pattern", func() {
-			contains, err := t.ContainsPattern("fo")
-			gm.Expect(err).NotTo(gm.HaveOccurred())
+			contains := t.Contains("fo")
 			gm.Expect(contains).To(gm.BeFalse())
 		})
 	})
