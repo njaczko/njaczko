@@ -26,7 +26,7 @@ import (
 func main() {
 	coolTrie := tries.New([]string{"foo", "bar", "baz"})
 
-	contains, err := coolTrie.ContainsPattern("foo")
+	contains, err := coolTrie.Contains("foo")
 	if err != nil {
 		panic(err)
 	}

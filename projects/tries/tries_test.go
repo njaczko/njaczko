@@ -75,12 +75,12 @@ var _ = gk.Describe("Tries", func() {
 			gm.Expect(contains).To(gm.BeTrue())
 		})
 
-		gk.It("returns true if the pattern is a substring of another pattern", func() {
+		gk.It("returns true if the pattern is a prefix of another pattern", func() {
 			contains := t.Contains("bar")
 			gm.Expect(contains).To(gm.BeTrue())
 		})
 
-		gk.It("returns false if pattern has not been added, but is a substring of another pattern", func() {
+		gk.It("returns false if pattern has not been added, but is a prefix of another pattern", func() {
 			contains := t.Contains("fo")
 			gm.Expect(contains).To(gm.BeFalse())
 		})
