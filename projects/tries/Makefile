@@ -5,5 +5,5 @@ unit-tests: phony ## Run the unit tests.
 		--randomizeAllSpecs --randomizeSuites --trace \
 		--cover --coverprofile=cover.coverprofile --outputdir=.
 
-view-test-coverage: phony unit-tests ## View unit test coverage.
+view-test-coverage: phony unit-tests ## View unit test coverage in browser.
 	go tool cover -html=cover.coverprofile
