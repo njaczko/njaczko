@@ -7,7 +7,7 @@ A Go implementation of [tries](https://en.wikipedia.org/wiki/Trie).
 Use `go get`:
 
 ```sh
-go get -u github.com/njaczko/njaczko/projects/tries
+go get -u github.com/njaczko/njaczko/projects/tries@main
 ```
 
 ## Usage
@@ -26,12 +26,7 @@ import (
 func main() {
 	coolTrie := tries.New([]string{"foo", "bar", "baz"})
 
-	contains, err := coolTrie.Contains("foo")
-	if err != nil {
-		panic(err)
-	}
-
-	if contains {
+	if coolTrie.Contains("foo") {
 		fmt.Println("coolTrie contains 'foo'!")
 		return
 	}
