@@ -25,10 +25,10 @@ call plug#end()
 
 " TABS, SPACES, AND FILETYPES ##################################################
 
-"haml hamljs javascript jsonnet lua python ruby sh vim yaml yml zsh tf
+"haml hamljs javascript jsonnet lua ruby sh vim yaml yml zsh tf
 autocmd Filetype * setlocal tabstop=2 expandtab shiftwidth=2 smarttab
 autocmd Filetype notes,rst setlocal tabstop=3 shiftwidth=3 expandtab
-autocmd Filetype c,go,typescript setlocal tabstop=4 expandtab shiftwidth=4 smarttab
+autocmd Filetype c,go,python,typescript setlocal tabstop=4 expandtab shiftwidth=4 smarttab
 " tabs instead of spaces in makefiles.
 autocmd FileType make set noexpandtab
 
@@ -47,7 +47,8 @@ map <c-k> 10k
 " yank to clipboard
 map Y "+y
 nnoremap <c-w> <c-w><c-w>
-nnoremap Z :w<CR>
+nnoremap K :w<CR>
+nnoremap Z :q<CR>
 nmap I eli
 nmap W 5w
 nmap B 5b
@@ -132,8 +133,8 @@ function LoadMiscPlugins()
   Plug 'alunny/pegjs-vim'
   Plug 'joshdick/onedark.vim', { 'on': 'Onedark' } " color scheme
   Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' } " file tree explorer
-  Plug 'tpope/vim-fugitive', { 'on': 'Git' } " git
   Plug 'tsandall/vim-rego'
+  Plug 'tpope/vim-fugitive', { 'on': 'Git' } " git
   Plug 'evanleck/vim-svelte', {'branch': 'main'} " svelte syntax highlighting
   call plug#end()
 endfunction
@@ -185,6 +186,10 @@ function HighlightHistory()
   hi def link even_date String
 endfunction
 
+" underscores in markdown files are incorrectly being highlighted as syntax
+" errors. this removes the annoying false positives, but may ignore other
+" markdown syntax errors.
+hi link markdownError Normal
 
 " PLUGIN CONFIGURATION #########################################################
 
@@ -210,6 +215,7 @@ nmap <silent> <Right> :bnext!<CR>
 " close current buffer. in the future, could use some func that will exit vim
 " when the last buffer is deleted
 nmap <silent> <Leader>q :bd<CR>
+nmap <silent> <Leader>Q :bd!<CR>
 
 " jiangmiao/auto-pairs: don't do auto pairs for single and double quotes
 let g:AutoPairs = {'(':')', '[':']', '{':'}', '```':'```', '"""':'"""', "'''":"'''", "`":"`"}
@@ -249,7 +255,9 @@ let g:ale_lint_on_text_changed = 'never'
 let g:ale_fix_on_save = 1
 " fixing legacy code sometimes results in huge diffs. don't automatically fix
 " often-legacy filetypes
-autocmd Filetype ruby,typescript let g:ale_fix_on_save = 0
+" autocmd Filetype ruby let g:ale_fix_on_save = 0
+autocmd Filetype typescript let g:ale_fix_on_save = 0
+autocmd Filetype yaml let g:ale_fix_on_save = 0
 " all of the linters need to be installed in order to work. ALE will not warn
 " if they are enabled but not installed. Some of the Go linters come with the
 " Go installation (e.g. gofmt) but others need to be installed separately.
@@ -259,11 +267,12 @@ let g:ale_linters = {
 let g:ale_fixers = {
 \   '*': ['trim_whitespace'],
 \   'go': ['gofmt', 'goimports'],
-\   'javascript': ['prettier'],
 \   'html': ['prettier'],
-\   'yaml': ['prettier'],
+\   'javascript': ['prettier'],
 \   'markdown': ['prettier'],
+\   'python': ['black'],
 \   'ruby': ['rubocop'],
+\   'yaml': ['prettier'],
 \}
 " can renable these as needed
 " \   'typescript': ['prettier'], " large diffs with legacy code
