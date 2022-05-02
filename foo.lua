@@ -1,19 +1,13 @@
--- originURL = osExecute('git remote get-url origin')
--- local function osExecute(cmd)
---     local fileHandle     = assert(io.popen(cmd, 'r'))
---     local commandOutput  = assert(fileHandle:read('*a'))
---     -- local returnTable    = {fileHandle:close()}
---     -- return commandOutput,returnTable[3]            -- rc[3] contains returnCode
---     return commandOutput
--- end
-cmd = 'git remote get-url origin'
--- this works, but commented out for testing
--- originURL  = io.popen(cmd, 'r'):read('*a')
-originURL = 'git@github.com:njaczko/coins.git'
+local function exec(cmd)
+  -- TODO improve leading + trailing whitespace stripping
+  -- TODO check cmd's status code
+  return io.popen(cmd, 'r'):read('*a'):gsub('\n', '')
+end
+
 -- TODO check if ssh or https. will assume ssh for now.
--- TODO check command failed
-originURL = originURL:gsub("git@github.com:", "https://github.com/")
-originURL = originURL:gsub("%.git", "")
--- this works, but commented out for testing
--- os.execute('open "" "' .. originURL .. '"')
-print(originURL)
+originURL  = exec('git remote get-url origin'):gsub("git@github.com:", "https://github.com/"):gsub("%.git", "")
+defaultBranch = exec("git remote show origin | sed -n '/HEAD branch/s/.*: //p'")
+pathInRepo = exec(string.format("git ls-files --full-name %s", vim.fn.expand('%')))
+currentLineNum = unpack(vim.api.nvim_win_get_cursor(0))
+githubURL = string.format("%s/blob/%s/%s#L%s", originURL, defaultBranch, pathInRepo, currentLineNum)
+exec(string.format('open "%s"', githubURL))
