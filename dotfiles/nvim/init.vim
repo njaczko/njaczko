@@ -56,10 +56,10 @@ vmap W 5w
 vmap B 5b
 map a ^i
 imap jj <Esc>
-imap jk <Esc>
 imap kk <Down><CR>
-"comment out the line with the cursor
+" comment out the line with the cursor
 nmap <Leader>c Vgc
+" change a word to the first spelling suggestion
 nmap <Leader>z z=1<CR>
 " skip the bullet point when editing beginning of line in notes
 autocmd Filetype notes nmap a ^wi
@@ -82,19 +82,16 @@ set notimeout
 nnoremap <Leader>s :%s/\<<C-r><C-w>\>//g<Left><Left>
 " same as above, except pre-fill new word with old word
 nnoremap <Leader>S :%s/\<<C-r><C-w>\>/<C-r><C-w>/g<Left><Left>
-" :q quits all in diff mode
-if &diff | nnoremap :q<CR> :qa<CR> | endif
 " search for the visually selected text
 vnoremap <Leader>f y/\V<C-R>=escape(@",'/\')<CR><CR>
-" noh
+" remove highlighting for search matches
 nmap <silent> <Leader>n :noh<CR>
+" set 'a' mark
+nmap <leader>a :mark a<CR>
 
 
 " COMMANDS #####################################################################
 
-command Yaml set ft=yaml
-command Adoc set ft=asciidoc
-command Json set ft=json
 " turn on spell checking (use [s and ]s to move between misspelled words)
 command Spell set spell
 " turn off spell checking
@@ -107,15 +104,15 @@ command Rel set relativenumber
 command -nargs=* GlobalReplace call GlobalReplace(<f-args>)
 command InsertPrintDebugger execute "r ~/.config/nvim/debugger-print-statements/" . &ft
 
-" prettify the selected json lines
-command -range PrettyJson <line1>,<line2>!python -m json.tool
+" prettify the selected json lines. requires https://github.com/stedolan/jq
+command -range PrettyJson <line1>,<line2>!jq
 " prettify xml
 command! PrettyXML :%!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
 nnoremap = :PrettyXML<Cr>
 
 " highlight column 80. off by default because of screen burn in.
-command CharBar highlight colorcolumn ctermbg=DarkGray | set colorcolumn=80
-command NoCharBar set colorcolumn=
+command Charbar highlight colorcolumn ctermbg=DarkGray | set colorcolumn=80
+command Nocharbar set colorcolumn=
 
 " do not redraw for commands that were not typed (e.g. mapping that enters
 " visual mode and highlights)
@@ -152,6 +149,50 @@ autocmd BufWritePre * silent! %s/\s\+$//e
 " close location list when closing main file
 autocmd BufWinEnter quickfix nnoremap <silent> <buffer> q :cclose<cr>:lclose<cr>
 autocmd BufEnter * if (winnr('$') == 1 && &buftype ==# 'quickfix' ) | bd | q | endif
+
+" openGithub crafts the GitHub url for the current line and opens it in the
+" browser
+lua << EOF
+function openGithub()
+  local function exec(cmd)
+    -- shell out then strip trailing whitespace
+    output = vim.call('system', cmd):gsub("%s*$", "")
+    if (vim.v.shell_error ~= 0) then error(string.format("'%s' failed: %s", cmd, output)) end
+    return output
+  end
+
+  -- TODO check if ssh or https. will assume ssh for now.
+  originURL  = exec('git remote get-url origin'):gsub("git@github.com:", "https://github.com/"):gsub("%.git", "")
+  defaultBranch = exec("git remote show origin | sed -n '/HEAD branch/s/.*: //p'")
+  pathInRepo = exec(string.format("git ls-files --full-name %s", vim.fn.expand('%')))
+  currentLineNum = unpack(vim.api.nvim_win_get_cursor(0))
+  githubURL = string.format("%s/blob/%s/%s#L%s", originURL, defaultBranch, pathInRepo, currentLineNum)
+  exec(string.format('open "%s"', githubURL))
+end
+EOF
+command OpenGithub lua openGithub()
+
+" Keyword completion is my most-used coc feature for most file types.
+" On machines where I wouldn't normally have node installed, this keyword
+" completion is pretty similar to what coc gives us, but without the bloat!
+" My main gripes about the built-in completion are that entering the
+" completion sub-mode is visually distracting, opening the popup menu can be
+" slow when synchronously loading keywords from large buffers, coc is
+" smarter about opening the popup menu, and coc supports fuzzy matching
+" keyword suggestions.
+function KeywordCompletion()
+  " open completion menu when insert mode is entered, or <space> is pressed, or kk  is pressed
+  autocmd InsertEnter * :call feedkeys("\<C-n>\<C-p>", 'n')
+  " disable the auto pairs plugin from creating an imapping for <space>
+  let g:AutoPairsMapSpace = 0
+  inoremap <space> <space><C-n><C-p>
+  inoremap <expr> kk pumvisible() ? "\<lt>Down>\<lt>CR>" : "\<lt>C-n>\<lt>C-p>"
+
+  " completion menu options
+  set completeopt=longest,menuone
+  " display no more than 10 suggestions at a time
+  set pumheight=10
+endfunction
 
 
 " HIGHLIGHTS ###################################################################
@@ -255,7 +296,7 @@ let g:ale_lint_on_text_changed = 'never'
 let g:ale_fix_on_save = 1
 " fixing legacy code sometimes results in huge diffs. don't automatically fix
 " often-legacy filetypes
-" autocmd Filetype ruby let g:ale_fix_on_save = 0
+autocmd Filetype ruby let g:ale_fix_on_save = 0
 autocmd Filetype typescript let g:ale_fix_on_save = 0
 autocmd Filetype yaml let g:ale_fix_on_save = 0
 " all of the linters need to be installed in order to work. ALE will not warn
