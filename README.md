@@ -6,4 +6,4 @@ _somewhere_.
 
 ## Contact
 
-Feel free to reach me on [LinkedIn](www.linkedin.com/in/njaczko).
+Feel free to reach me on [LinkedIn](https://www.linkedin.com/in/njaczko).
