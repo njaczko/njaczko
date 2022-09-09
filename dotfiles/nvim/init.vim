@@ -12,14 +12,17 @@ Plug 'dense-analysis/ale' " async linting engine
 Plug 'easymotion/vim-easymotion', { 'on': ['<Plug>(easymotion-bd-f)', '<Plug>(easymotion-sn)'] } " easymotion
 Plug 'https://tpope.io/vim/repeat.git' " repeat commands
 Plug 'https://tpope.io/vim/surround.git' " smart braces, parens, quotes, etc.
-Plug 'jiangmiao/auto-pairs' " smart braces, parens, brackets
+Plug 'njaczko/auto-pairs' " smart braces, parens, brackets
 Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'} " autocompletion
 Plug 'tpope/vim-commentary' " block commenting
 Plug 'xolox/vim-misc', { 'for': 'notes'} " note taking dependency
-Plug 'xolox/vim-notes', { 'for': 'notes'} " note taking
-Plug 'lifepillar/pgsql.vim', { 'for': 'sql'} " postgres syntax highlighting
+Plug 'njaczko/vim-notes', { 'for': 'notes'} " note taking
+Plug 'lifepillar/pgsql.vim', { 'for': 'sql' } " postgres syntax highlighting
+Plug 'ralismark/opsort.vim' " sort lines based on visual selection
+Plug 'nvim-treesitter/nvim-treesitter' " LSP syntax highlighting, etc.
+Plug 'njaczko/nvim-dummy-text'
 call plug#end()
 
 
@@ -38,6 +41,8 @@ autocmd FileType markdown set textwidth=80
 " filetypes
 autocmd BufNewFile,BufRead *.tsx set ft=typescript
 autocmd BufNewFile,BufRead *.pegjs set ft=pegjs
+autocmd BufNewFile,BufRead *.tf set ft=hcl
+autocmd BufNewFile,BufRead *.hcl set ft=hcl
 
 
 " MAPPINGS #####################################################################
@@ -56,7 +61,6 @@ vmap W 5w
 vmap B 5b
 map a ^i
 imap jj <Esc>
-imap kk <Down><CR>
 " comment out the line with the cursor
 nmap <Leader>c Vgc
 " change a word to the first spelling suggestion
@@ -103,6 +107,7 @@ command Norel set norelativenumber
 command Rel set relativenumber
 command -nargs=* GlobalReplace call GlobalReplace(<f-args>)
 command InsertPrintDebugger execute "r ~/.config/nvim/debugger-print-statements/" . &ft
+command Source source $MYVIMRC
 
 " prettify the selected json lines. requires https://github.com/stedolan/jq
 command -range PrettyJson <line1>,<line2>!jq
@@ -124,7 +129,8 @@ command Center 40vsplit empty
 
 " loading plugins with vim-plug is somewhat time expensive during nvim
 " startup. these plugins are rarely used, but sometimes useful, so we load
-" them only on demand
+" them only on demand. If the plugins do not work after being loaded, they
+" likely need to be installed.
 function LoadMiscPlugins()
   call plug#begin('~/.local/share/nvim/plugged')
   Plug 'alunny/pegjs-vim'
@@ -133,6 +139,7 @@ function LoadMiscPlugins()
   Plug 'tsandall/vim-rego'
   Plug 'tpope/vim-fugitive', { 'on': 'Git' } " git
   Plug 'evanleck/vim-svelte', {'branch': 'main'} " svelte syntax highlighting
+  Plug 'mbbill/undotree'
   call plug#end()
 endfunction
 command LoadMiscPlugins call LoadMiscPlugins()
@@ -169,8 +176,23 @@ function openGithub()
   githubURL = string.format("%s/blob/%s/%s#L%s", originURL, defaultBranch, pathInRepo, currentLineNum)
   exec(string.format('open "%s"', githubURL))
 end
+
+function formatX509Cert()
+  max_length = 75
+  wrapped_lines = {"-----BEGIN CERTIFICATE-----"}
+  current_line = vim.api.nvim_get_current_line():gsub("^%s*", ""):gsub("%s*$", "")
+  while string.len(current_line) > max_length do
+    table.insert(wrapped_lines, current_line:sub(1,max_length))
+    current_line = current_line:sub(max_length + 1, -1)
+  end
+  table.insert(wrapped_lines, current_line)
+  table.insert(wrapped_lines, "-----END CERTIFICATE-----")
+
+  vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, -1, true, wrapped_lines)
+end
 EOF
 command OpenGithub lua openGithub()
+command FmtCert lua formatX509Cert()
 
 " Keyword completion is my most-used coc feature for most file types.
 " On machines where I wouldn't normally have node installed, this keyword
@@ -267,28 +289,10 @@ function GlobalReplace(old, new)
 endfunction
 
 " vim-notes
-let g:notes_directories = ['~/notes']
+let g:notes_directories = ['~/notes/vim-notes']
 autocmd BufNewFile,BufRead *.note,*.notes set ft=notes
 autocmd BufRead,BufNewFile ~/notes/* set ft=notes
-autocmd Filetype notes set foldmethod=manual
-autocmd BufWritePost ~/notes/* call FixAllNoteLevels()
-command FixNotes call FixAllNoteLevels()
-" make sure each level of indentation uses the correct bullet char
-function FixAllNoteLevels()
-  " set a mark so we can return to this location when we're done fixing
-  mark x
-  silent call FixNoteLevel(0, "•")
-  silent call FixNoteLevel(1, "◦")
-  silent call FixNoteLevel(2, "▸")
-  silent call FixNoteLevel(3, "▹")
-  silent call FixNoteLevel(4, "▪")
-  silent call FixNoteLevel(5, "▫")
-  normal 'x
-endfunction
-
-function FixNoteLevel(level, char)
-  execute '%s/\(^ ' . repeat("   ", a:level) . '\)\(•\|◦\|▸\|▹\|▪\|▫\)/' repeat("   ", a:level) . a:char . "/ge"
-endfunction
+autocmd BufWritePost ~/notes/* call xolox#notes#fix_all_bullet_levels()
 
 " ALE
 " only lint on save
@@ -319,19 +323,36 @@ let g:ale_fixers = {
 " \   'typescript': ['prettier'], " large diffs with legacy code
 autocmd Filetype go,typescript nmap gd :ALEGoToDefinition<CR>
 
-" COC
+" COC (coc.nvim)
 " rename symbol using LSP
 nmap <leader>r <Plug>(coc-rename)
+" this is needed for the custom popup menu added in 0.0.82. without the coc#pum#info
+" logic, <CR> closes the pum but does not insert a newline when no suggestions
+" are selected. It is a (unpleasant) way to see if a suggestion has been selected.
+" `"suggest.noselect": true` is also needed in the CocConfig to prevent
+" suggestions from automatically being selected.
+inoremap <silent><expr> <CR> coc#pum#visible() && coc#pum#info()['index'] != -1 ? coc#pum#confirm() : "\<CR>"
+" insert the first suggestion with kk
+inoremap <silent><expr> kk coc#pum#visible() ? coc#_select_confirm() : "kk"
+
 
 " pgsql.vim. treat all sql files as postgres.
 let g:sql_type_default = 'pgsql'
 
-" xolox/vim-notes
-" don't highlight the names of other notes (they are still hyperlinks)
-hi notesName ctermfg=fg
-" bold is hard to distinguish from normal text. let's make it a different color
-hi notesBold ctermfg=DarkRed
+" nvim-treesitter
+lua << EOF
+  require'nvim-treesitter.configs'.setup {
+    -- A list of parser names, or "all"
+    ensure_installed = { "hcl", "markdown", "markdown_inline" },
+    highlight = {
+      enable = true,
+      additional_vim_regex_highlighting = false,
+    },
+  }
+EOF
 
+" opsort.vim
+" NOTE: use `gs` to sort selected text. in particular, visual block selection.
 
 " SETTINGS AND MISCELLANEOUS ###################################################
 
@@ -377,3 +398,6 @@ autocmd BufEnter *.credentials.json set noundofile
 autocmd BufEnter /private* set noundofile
 autocmd BufEnter /tmp* set noundofile
 autocmd BufEnter *.private set noundofile
+
+" disable netrw history
+let g:netrw_dirhistmax = 0
