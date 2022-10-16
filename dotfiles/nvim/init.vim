@@ -17,8 +17,7 @@ Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
 Plug 'neoclide/coc.nvim', {'branch': 'release'} " autocompletion
 Plug 'tpope/vim-commentary' " block commenting
-Plug 'xolox/vim-misc', { 'for': 'notes'} " note taking dependency
-Plug 'njaczko/vim-notes', { 'for': 'notes'} " note taking
+Plug 'njaczko/vim-notes' " note taking
 Plug 'lifepillar/pgsql.vim', { 'for': 'sql' } " postgres syntax highlighting
 Plug 'ralismark/opsort.vim' " sort lines based on visual selection
 Plug 'nvim-treesitter/nvim-treesitter' " LSP syntax highlighting, etc.
@@ -288,12 +287,6 @@ function GlobalReplace(old, new)
   execute "args `rg" a:old "-l` | argdo %s/" . a:old . "/" . a:new . "/g | up"
 endfunction
 
-" vim-notes
-let g:notes_directories = ['~/notes/vim-notes']
-autocmd BufNewFile,BufRead *.note,*.notes set ft=notes
-autocmd BufRead,BufNewFile ~/notes/* set ft=notes
-autocmd BufWritePost ~/notes/* call xolox#notes#fix_all_bullet_levels()
-
 " ALE
 " only lint on save
 let g:ale_lint_on_text_changed = 'never'
@@ -378,7 +371,10 @@ augroup END
 set shada="NONE"
 
 " abbreviations
-ab teh the
+abbreviate teh the
+abbreviate livermap liveramp
+abbreviate ssolrcom sso.liveramp.com
+abbreviate taht that
 
 " handling case in search
 set ignorecase
@@ -401,3 +397,7 @@ autocmd BufEnter *.private set noundofile
 
 " disable netrw history
 let g:netrw_dirhistmax = 0
+
+" automatically continue comment leader when hitting <Enter> in insert mode or
+" `o`/`O` in normal mode. see `:h fo-table` for more.
+set formatoptions+=r formatoptions+=o
