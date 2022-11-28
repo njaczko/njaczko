@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# TODO rename to freq stuff to focus files
+#
+# TODO get the path to .freq from an env var (with a default value). One can
+# have multpile sets of files by using freq with multiple env vars.
+
+usage() {
+  cat << EOF
+TODO write usage!
+The current working directory is: $PWD
+You are logged in as: $(whoami)
+EOF
+  exit 1
+}
+
+add_paths() {
+  for p in "$@"
+  do
+    echo "$PWD/$p" >> ~/.freq
+  done
+}
+
+remove_paths() {
+  for p in "$@"
+  do
+    # NOTE: this does not work with all `sed` distributions
+    sed -i '' "/$p/d" ~/.freq
+  done
+}
+
+main() {
+  if [ $# -eq 0 ]; then
+    if [ -s ~/.freq ]; then
+      xargs nvim < ~/.freq
+    else
+      nvim
+    fi
+    exit
+  fi
+
+  case $1 in
+    set)
+      shift
+      echo "$PWD/$1" > ~/.freq
+      shift
+      add_paths "$@"
+      ;;
+    add)
+      shift
+      add_paths "$@"
+      ;;
+    rm)
+      shift
+      remove_paths "$@"
+      ;;
+    view)
+      shift
+      cat ~/.freq
+      ;;
+    edit)
+      shift
+      nvim ~/.freq
+      ;;
+    help | *)
+      usage
+      ;;
+  esac
+}
+
+main "$@"
