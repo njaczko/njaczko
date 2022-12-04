@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# TODO rename to freq stuff to focus files
-#
-# TODO get the path to .freq from an env var (with a default value). One can
-# have multpile sets of files by using freq with multiple env vars.
-
-editor_cmd="${FF_EDITOR_CMD:-nvim}"
+editor_cmd=${FF_EDITOR_CMD:-nvim}
+storage_file=${FF_STORAGE_FILE:-~/.focus_files}
 
 usage() {
   cat << EOF
@@ -19,7 +15,7 @@ EOF
 add_paths() {
   for p in "$@"
   do
-    echo "$PWD/$p" >> ~/.freq
+    echo "$PWD/$p" >> "$storage_file"
   done
 }
 
@@ -27,24 +23,25 @@ remove_paths() {
   for p in "$@"
   do
     # NOTE: this does not work with all `sed` distributions
-    sed -i '' "/$p/d" ~/.freq
+    sed -i '' "/$p/d" "$storage_file"
   done
 }
 
 main() {
   if [ $# -eq 0 ]; then
-    if [ -s ~/.freq ]; then
-      xargs editor_cmd < ~/.freq
+    if [ -s "$storage_file" ]; then
+      xargs "$editor_cmd" < "$storage_file"
     else
-      editor_cmd
+      $editor_cmd
     fi
     exit
   fi
 
   case $1 in
     set)
+      # TODO when called with no additional args, shouldn't do anything
       shift
-      echo "$PWD/$1" > ~/.freq
+      echo "$PWD/$1" > "$storage_file"
       shift
       add_paths "$@"
       ;;
@@ -58,11 +55,11 @@ main() {
       ;;
     view)
       shift
-      cat ~/.freq
+      cat "$storage_file"
       ;;
     edit)
       shift
-      editor_cmd ~/.freq
+      $editor_cmd "$storage_file"
       ;;
     help | *)
       usage
