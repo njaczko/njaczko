@@ -5,6 +5,8 @@
 # TODO get the path to .freq from an env var (with a default value). One can
 # have multpile sets of files by using freq with multiple env vars.
 
+editor_cmd="${FF_EDITOR_CMD:-nvim}"
+
 usage() {
   cat << EOF
 TODO write usage!
@@ -32,9 +34,9 @@ remove_paths() {
 main() {
   if [ $# -eq 0 ]; then
     if [ -s ~/.freq ]; then
-      xargs nvim < ~/.freq
+      xargs editor_cmd < ~/.freq
     else
-      nvim
+      editor_cmd
     fi
     exit
   fi
@@ -60,7 +62,7 @@ main() {
       ;;
     edit)
       shift
-      nvim ~/.freq
+      editor_cmd ~/.freq
       ;;
     help | *)
       usage
