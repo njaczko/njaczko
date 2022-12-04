@@ -5,9 +5,25 @@ storage_file=${FF_STORAGE_FILE:-~/.focus_files}
 
 usage() {
   cat << EOF
-TODO write usage!
-The current working directory is: $PWD
-You are logged in as: $(whoami)
+
+focus_files supports managing a list of files and opening all files in the list with one command.
+
+Usage: focus_files [subcommand...]
+ (no args)                    Open all of the registered files.
+ set [<relative file paths>...]    Replace the focus files list with the provided files. Passing no paths clears the list.
+ add <relative file paths>    Add files to the list.
+ rm <relative file paths>     Remove files from the list.
+ view                         View the list of the files without opening them.
+ edit                         Edit the list of the files manually.
+ help                         Print the usage text.
+
+Environment varibles:
+FF_STORAGE_FILE     Absolute path to the file where focus_files stores the list of files. Default: ~/.focus_files
+FF_EDITOR_CMD       Command used to open the files. Default: nvim
+
+Example:
+./focus_files set foo bar && ./focus_files  # Register PWD/foo and PWD/bar, then open foo and bar.
+
 EOF
   exit 1
 }
@@ -27,20 +43,29 @@ remove_paths() {
   done
 }
 
+exit_if_no_storage() {
+  [ -s "$storage_file" ] || exit
+}
+
 main() {
   if [ $# -eq 0 ]; then
-    if [ -s "$storage_file" ]; then
-      xargs "$editor_cmd" < "$storage_file"
-    else
-      $editor_cmd
-    fi
+    exit_if_no_storage
+
+    xargs "$editor_cmd" < "$storage_file"
     exit
   fi
 
   case $1 in
     set)
-      # TODO when called with no additional args, shouldn't do anything
       shift
+      if [ $# -eq 0 ]; then
+        exit_if_no_storage
+
+        # clear the list
+        rm "$storage_file"
+        exit
+      fi
+
       echo "$PWD/$1" > "$storage_file"
       shift
       add_paths "$@"
@@ -50,10 +75,14 @@ main() {
       add_paths "$@"
       ;;
     rm)
+      exit_if_no_storage
+
       shift
       remove_paths "$@"
       ;;
     view)
+      exit_if_no_storage
+
       shift
       cat "$storage_file"
       ;;
