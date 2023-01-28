@@ -9,13 +9,13 @@ usage() {
 focus_files supports managing a list of files and opening all files in the list with one command.
 
 Usage: focus_files [subcommand...]
- (no args)                    Open all of the registered files.
- set [<relative file paths>...]    Replace the focus files list with the provided files. Passing no paths clears the list.
- add <relative file paths>    Add files to the list.
- rm <relative file paths>     Remove files from the list.
- view                         View the list of the files without opening them.
- edit                         Edit the list of the files manually.
- help                         Print the usage text.
+ (no args)                          Open all of the registered files.
+ set [<relative file paths>...]     Replace the focus files list with the provided files. Passing no paths clears the list.
+ add <relative file paths>          Add files to the list.
+ rm <relative file paths>           Remove files from the list.
+ view                               View the list of the files without opening them.
+ edit                               Edit the list of the files manually. Start a line with # to comment it out.
+ help                               Print the usage text.
 
 Environment varibles:
 FF_STORAGE_FILE     Absolute path to the file where focus_files stores the list of files. Default: ~/.focus_files
@@ -51,7 +51,8 @@ main() {
   if [ $# -eq 0 ]; then
     exit_if_no_storage
 
-    xargs "$editor_cmd" < "$storage_file"
+    # ignore lines in the storage file that start with `#`
+    sed '/^#/d' < "$storage_file" | xargs "$editor_cmd"
     exit
   fi
 
