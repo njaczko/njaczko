@@ -4,38 +4,47 @@
 " manage plugins with vim-plug
 call plug#begin('~/.local/share/nvim/plugged')
 Plug 'morhetz/gruvbox' " color scheme
-Plug 'google/vim-jsonnet', { 'for': 'jsonnet' } " jsonnet syntax highlighting
-Plug 'leafgarland/typescript-vim' " typescript syntax highlighting
-Plug 'njaczko/vim-reslang' " reslang syntax highlighting
+Plug 'udalov/kotlin-vim', { 'for': 'kotlin' } " kotlin syntax highlighting
+Plug 'google/vim-jsonnet', { 'for': 'jsonnet' }
+Plug 'leafgarland/typescript-vim'
 Plug 'ap/vim-buftabline'
+Plug 'evanleck/vim-svelte', {'branch': 'main', 'for': 'svelte'} " svelte syntax highlighting
 Plug 'dense-analysis/ale' " async linting engine
 Plug 'easymotion/vim-easymotion', { 'on': ['<Plug>(easymotion-bd-f)', '<Plug>(easymotion-sn)'] } " easymotion
 Plug 'https://tpope.io/vim/repeat.git' " repeat commands
 Plug 'https://tpope.io/vim/surround.git' " smart braces, parens, quotes, etc.
-Plug 'njaczko/auto-pairs' " smart braces, parens, brackets
 Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
-Plug 'neoclide/coc.nvim', {'branch': 'release'} " autocompletion
+Plug 'tpope/vim-fugitive', { 'on': 'Git' }
+Plug 'mbbill/undotree', { 'on': 'UndotreeToggle' }
 Plug 'tpope/vim-commentary' " block commenting
-Plug 'njaczko/vim-notes' " note taking
 Plug 'lifepillar/pgsql.vim', { 'for': 'sql' } " postgres syntax highlighting
 Plug 'ralismark/opsort.vim' " sort lines based on visual selection
 Plug 'nvim-treesitter/nvim-treesitter' " LSP syntax highlighting, etc.
+Plug 'dkarter/bullets.vim', { 'for': 'markdown' } " automatic bullet list formatting
+Plug 'AndrewRadev/inline_edit.vim', { 'on': 'InlineEdit' }
+Plug 'njaczko/vim-reslang'
+Plug 'njaczko/auto-pairs' " smart braces, parens, brackets
+Plug 'njaczko/vim-notes' " note taking
 Plug 'njaczko/nvim-dummy-text'
+Plug 'njaczko/nvim-misc'
+Plug 'hrsh7th/cmp-buffer'
+Plug 'hrsh7th/nvim-cmp'
+Plug 'hrsh7th/cmp-path'
+Plug 'hrsh7th/cmp-nvim-lsp'
+Plug 'neovim/nvim-lspconfig'
 call plug#end()
-
 
 " TABS, SPACES, AND FILETYPES ##################################################
 
-"haml hamljs javascript jsonnet lua ruby sh vim yaml yml zsh tf
 autocmd Filetype * setlocal tabstop=2 expandtab shiftwidth=2 smarttab
 autocmd Filetype notes,rst setlocal tabstop=3 shiftwidth=3 expandtab
 autocmd Filetype c,go,python,typescript setlocal tabstop=4 expandtab shiftwidth=4 smarttab
 " tabs instead of spaces in makefiles.
 autocmd FileType make set noexpandtab
 
-" textwidth is most useful in markdown files
 autocmd FileType markdown set textwidth=80
+autocmd FileType gitcommit set textwidth=50
 
 " filetypes
 autocmd BufNewFile,BufRead *.tsx set ft=typescript
@@ -65,7 +74,7 @@ nmap <Leader>c Vgc
 " change a word to the first spelling suggestion
 nmap <Leader>z z=1<CR>
 " skip the bullet point when editing beginning of line in notes
-autocmd Filetype notes nmap a ^wi
+autocmd Filetype notes,markdown.markdownnotes nmap a ^wi
 " textwidth wrap all the lines in the file
 nmap gQ gggqG
 " wrap a long line without having to enter visual mode
@@ -91,6 +100,8 @@ vnoremap <Leader>f y/\V<C-R>=escape(@",'/\')<CR><CR>
 nmap <silent> <Leader>n :noh<CR>
 " set 'a' mark
 nmap <leader>a :mark a<CR>
+" rename token using LSP
+nmap <leader>r :lua vim.lsp.buf.rename()<CR>
 
 
 " COMMANDS #####################################################################
@@ -107,12 +118,12 @@ command Rel set relativenumber
 command -nargs=* GlobalReplace call GlobalReplace(<f-args>)
 command InsertPrintDebugger execute "r ~/.config/nvim/debugger-print-statements/" . &ft
 command Source source $MYVIMRC
+command -nargs=* Cal r !cal -h <args>
 
 " prettify the selected json lines. requires https://github.com/stedolan/jq
 command -range PrettyJson <line1>,<line2>!jq
 " prettify xml
 command! PrettyXML :%!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
-nnoremap = :PrettyXML<Cr>
 
 " highlight column 80. off by default because of screen burn in.
 command Charbar highlight colorcolumn ctermbg=DarkGray | set colorcolumn=80
@@ -126,22 +137,8 @@ set lazyredraw
 " displays
 command Center 40vsplit empty
 
-" loading plugins with vim-plug is somewhat time expensive during nvim
-" startup. these plugins are rarely used, but sometimes useful, so we load
-" them only on demand. If the plugins do not work after being loaded, they
-" likely need to be installed.
-function LoadMiscPlugins()
-  call plug#begin('~/.local/share/nvim/plugged')
-  Plug 'alunny/pegjs-vim'
-  Plug 'joshdick/onedark.vim', { 'on': 'Onedark' } " color scheme
-  Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' } " file tree explorer
-  Plug 'tsandall/vim-rego'
-  Plug 'tpope/vim-fugitive', { 'on': 'Git' } " git
-  Plug 'evanleck/vim-svelte', {'branch': 'main'} " svelte syntax highlighting
-  Plug 'mbbill/undotree'
-  call plug#end()
-endfunction
-command LoadMiscPlugins call LoadMiscPlugins()
+" convert fancy bullet characters to dashes
+command PlainBullets %s/•\|◦\|▸\|▹\|▪\|▫/-/g
 
 " persist folds between sessions
 " views saved in ~/.local/share/nvim/view
@@ -149,71 +146,9 @@ command LoadMiscPlugins call LoadMiscPlugins()
 autocmd BufWinLeave * silent! mkview
 autocmd BufWinEnter * silent! loadview
 
-" strip whitespace on quit
-autocmd BufWritePre * silent! %s/\s\+$//e
-
-" close location list when closing main file
+" close location list when closing buffer
 autocmd BufWinEnter quickfix nnoremap <silent> <buffer> q :cclose<cr>:lclose<cr>
 autocmd BufEnter * if (winnr('$') == 1 && &buftype ==# 'quickfix' ) | bd | q | endif
-
-" openGithub crafts the GitHub url for the current line and opens it in the
-" browser
-lua << EOF
-function openGithub()
-  local function exec(cmd)
-    -- shell out then strip trailing whitespace
-    output = vim.call('system', cmd):gsub("%s*$", "")
-    if (vim.v.shell_error ~= 0) then error(string.format("'%s' failed: %s", cmd, output)) end
-    return output
-  end
-
-  -- TODO check if ssh or https. will assume ssh for now.
-  originURL  = exec('git remote get-url origin'):gsub("git@github.com:", "https://github.com/"):gsub("%.git", "")
-  defaultBranch = exec("git remote show origin | sed -n '/HEAD branch/s/.*: //p'")
-  pathInRepo = exec(string.format("git ls-files --full-name %s", vim.fn.expand('%')))
-  currentLineNum = unpack(vim.api.nvim_win_get_cursor(0))
-  githubURL = string.format("%s/blob/%s/%s#L%s", originURL, defaultBranch, pathInRepo, currentLineNum)
-  exec(string.format('open "%s"', githubURL))
-end
-
-function formatX509Cert()
-  max_length = 75
-  wrapped_lines = {"-----BEGIN CERTIFICATE-----"}
-  current_line = vim.api.nvim_get_current_line():gsub("^%s*", ""):gsub("%s*$", "")
-  while string.len(current_line) > max_length do
-    table.insert(wrapped_lines, current_line:sub(1,max_length))
-    current_line = current_line:sub(max_length + 1, -1)
-  end
-  table.insert(wrapped_lines, current_line)
-  table.insert(wrapped_lines, "-----END CERTIFICATE-----")
-
-  vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, -1, true, wrapped_lines)
-end
-EOF
-command OpenGithub lua openGithub()
-command FmtCert lua formatX509Cert()
-
-" Keyword completion is my most-used coc feature for most file types.
-" On machines where I wouldn't normally have node installed, this keyword
-" completion is pretty similar to what coc gives us, but without the bloat!
-" My main gripes about the built-in completion are that entering the
-" completion sub-mode is visually distracting, opening the popup menu can be
-" slow when synchronously loading keywords from large buffers, coc is
-" smarter about opening the popup menu, and coc supports fuzzy matching
-" keyword suggestions.
-function KeywordCompletion()
-  " open completion menu when insert mode is entered, or <space> is pressed, or kk  is pressed
-  autocmd InsertEnter * :call feedkeys("\<C-n>\<C-p>", 'n')
-  " disable the auto pairs plugin from creating an imapping for <space>
-  let g:AutoPairsMapSpace = 0
-  inoremap <space> <space><C-n><C-p>
-  inoremap <expr> kk pumvisible() ? "\<lt>Down>\<lt>CR>" : "\<lt>C-n>\<lt>C-p>"
-
-  " completion menu options
-  set completeopt=longest,menuone
-  " display no more than 10 suggestions at a time
-  set pumheight=10
-endfunction
 
 
 " HIGHLIGHTS ###################################################################
@@ -239,19 +174,17 @@ au ColorScheme * hi Normal ctermbg=None
 colorscheme gruvbox
 call ColorSchemeOverrides()
 
-" highlight dates in output from bash history command
-autocmd Filetype history call HighlightHistory()
-function HighlightHistory()
-  syn match even_date '^.*/.*[02468]/.*[[:space:]][[:space:]]'
-  syn match odd_date '^.*/.*[13579]/.*[[:space:]][[:space:]]'
-  hi def link odd_date Constant
-  hi def link even_date String
-endfunction
-
-" underscores in markdown files are incorrectly being highlighted as syntax
-" errors. this removes the annoying false positives, but may ignore other
-" markdown syntax errors.
+" nested bullets are confused for code blocks because they start with many
+" spaces. code fenced with backticks is still highlighted.
+highlight link markdownCodeBlock Normal
+" some things that are technically invalid markdown syntax (like unescaped
+" underscores) don't really cause issues for my use cases. the error
+" highlights are more of a nuisance than a help for me.
 hi link markdownError Normal
+" syntax highlighting inside code blocks. can add more languages, these are
+" just ones that I use often and have verified the highlighting works
+" correctly
+let g:markdown_fenced_languages = ['go', 'vim', 'bash', 'sql']
 
 " PLUGIN CONFIGURATION #########################################################
 
@@ -271,9 +204,11 @@ let g:fzf_colors = { 'hl': ['fg', 'Statement'], 'hl+': ['fg', 'Statement'] }
 set hidden
 " vim-buftabline: only show when >1 buffers open
 let g:buftabline_show=1
-" use arrow keys to switch buffers
-nmap <silent> <Left> :bprev!<CR>
-nmap <silent> <Right> :bnext!<CR>
+" switching buffers
+" nmap <silent> <Left> :bprev!<CR>
+" nmap <silent> <Right> :bnext!<CR>
+nmap <silent> <c-h> :bprev!<CR>
+nmap <silent> <c-l> :bnext!<CR>
 " close current buffer. in the future, could use some func that will exit vim
 " when the last buffer is deleted
 nmap <silent> <Leader>q :bd<CR>
@@ -290,12 +225,8 @@ endfunction
 " ALE
 " only lint on save
 let g:ale_lint_on_text_changed = 'never'
+let g:ale_virtualtext_cursor = 0
 let g:ale_fix_on_save = 1
-" fixing legacy code sometimes results in huge diffs. don't automatically fix
-" often-legacy filetypes
-autocmd Filetype ruby let g:ale_fix_on_save = 0
-autocmd Filetype typescript let g:ale_fix_on_save = 0
-autocmd Filetype yaml let g:ale_fix_on_save = 0
 " all of the linters need to be installed in order to work. ALE will not warn
 " if they are enabled but not installed. Some of the Go linters come with the
 " Go installation (e.g. gofmt) but others need to be installed separately.
@@ -303,31 +234,75 @@ let g:ale_linters = {
 \   'go': ['gopls', 'golint', 'gofmt', 'govet', 'goimports'],
 \}
 let g:ale_fixers = {
-\   '*': ['trim_whitespace'],
+\   '*': ['remove_trailing_lines', 'trim_whitespace'],
 \   'go': ['gofmt', 'goimports'],
-\   'html': ['prettier'],
-\   'javascript': ['prettier'],
 \   'markdown': ['prettier'],
 \   'python': ['black'],
 \   'ruby': ['rubocop'],
-\   'yaml': ['prettier'],
 \}
-" can renable these as needed
+" NOTE: fixing legacy code sometimes results in huge diffs. don't
+" automatically fix often-legacy filetypes. can renable these as needed:
+" \   'markdown': ['prettier'],
+" \   'html': ['prettier'],
+" \   'javascript': ['prettier'],
 " \   'typescript': ['prettier'], " large diffs with legacy code
+" \   'yaml': ['prettier'],
+
 autocmd Filetype go,typescript nmap gd :ALEGoToDefinition<CR>
 
-" COC (coc.nvim)
-" rename symbol using LSP
-nmap <leader>r <Plug>(coc-rename)
-" this is needed for the custom popup menu added in 0.0.82. without the coc#pum#info
-" logic, <CR> closes the pum but does not insert a newline when no suggestions
-" are selected. It is a (unpleasant) way to see if a suggestion has been selected.
-" `"suggest.noselect": true` is also needed in the CocConfig to prevent
-" suggestions from automatically being selected.
-inoremap <silent><expr> <CR> coc#pum#visible() && coc#pum#info()['index'] != -1 ? coc#pum#confirm() : "\<CR>"
-" insert the first suggestion with kk
-inoremap <silent><expr> kk coc#pum#visible() ? coc#_select_confirm() : "kk"
+" nvim-cmp
+set completeopt=menu,menuone,noselect
+set pumheight=10
 
+lua <<EOF
+  -- Set up nvim-cmp.
+  local cmp = require'cmp'
+
+  cmp.setup({
+    preselect = cmp.PreselectMode.None,
+    mapping = cmp.mapping.preset.insert({
+      ['<C-k>'] = cmp.mapping.select_prev_item(), -- previous suggestion
+      ['<C-j>'] = cmp.mapping.select_next_item(), -- next suggestion
+      ['kk'] = cmp.mapping.select_next_item(), -- next suggestion
+    }),
+    sources = cmp.config.sources({
+      { name = "path" }, -- file system paths
+      {
+        name = 'buffer',
+        option = {
+          get_bufnrs = function()
+            return vim.api.nvim_list_bufs()
+          end
+        }
+      },
+      { name = 'nvim_lsp' },
+    })
+  })
+
+  local nvim_lsp = require('lspconfig')
+
+  nvim_lsp['gopls'].setup{
+    cmd = {'gopls'},
+    on_attach = on_attach,
+    capabilities = capabilities,
+    settings = {
+      gopls = {
+        experimentalPostfixCompletions = true,
+        analyses = {
+          unusedparams = true,
+          shadow = true,
+        },
+        staticcheck = true,
+      },
+    },
+    init_options = {
+      usePlaceholders = true,
+    }
+  }
+  -- adding neovim/lspconfig causes SignColumn signs and inline virtual text
+  -- warnings to show up for language errors. I only want ALE to publish diagnostics
+  vim.diagnostic.disable()
+EOF
 
 " pgsql.vim. treat all sql files as postgres.
 let g:sql_type_default = 'pgsql'
@@ -336,7 +311,7 @@ let g:sql_type_default = 'pgsql'
 lua << EOF
   require'nvim-treesitter.configs'.setup {
     -- A list of parser names, or "all"
-    ensure_installed = { "hcl", "markdown", "markdown_inline" },
+    ensure_installed = { "hcl" },
     highlight = {
       enable = true,
       additional_vim_regex_highlighting = false,
@@ -346,6 +321,15 @@ EOF
 
 " opsort.vim
 " NOTE: use `gs` to sort selected text. in particular, visual block selection.
+
+" Bullets.vim
+let g:bullets_enabled_file_types = [ 'markdown', 'markdown.markdownnotes' ]
+autocmd Filetype markdown,markdown.markdownnotes inoremap <Tab> <Plug>(bullets-demote)
+autocmd Filetype markdown,markdown.markdownnotes inoremap <S-Tab> <Plug>(bullets-promote)
+" an imperfect solution for inserting bullets above the current line. doesn't
+" work for the top bullet in a list.
+autocmd Filetype markdown.markdownnotes nmap O k<Plug>(bullets-newline)
+let g:bullets_outline_levels = ['ROM', 'ABC', 'num', 'abc', 'rom', 'std-']
 
 " SETTINGS AND MISCELLANEOUS ###################################################
 
@@ -375,6 +359,7 @@ abbreviate teh the
 abbreviate livermap liveramp
 abbreviate ssolrcom sso.liveramp.com
 abbreviate taht that
+abbreviate TOOD TODO
 
 " handling case in search
 set ignorecase
@@ -401,3 +386,5 @@ let g:netrw_dirhistmax = 0
 " automatically continue comment leader when hitting <Enter> in insert mode or
 " `o`/`O` in normal mode. see `:h fo-table` for more.
 set formatoptions+=r formatoptions+=o
+
+set foldmethod=manual
