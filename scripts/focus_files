@@ -9,13 +9,14 @@ usage() {
 focus_files supports managing a list of files and opening all files in the list with one command.
 
 Usage: focus_files [subcommand...]
- (no args)                          Open all of the registered files.
- set [<relative file paths>...]     Replace the focus files list with the provided files. Passing no paths clears the list.
- add <relative file paths>          Add files to the list.
- rm <relative file paths>           Remove files from the list.
- view                               View the list of the files without opening them.
- edit                               Edit the list of the files manually. Start a line with # to comment it out.
- help                               Print the usage text.
+ (no args)                                Open all of the registered files.
+ set [<relative file paths>...]           Replace the focus files list with the provided files. Passing no paths clears the list.
+ set-absolute [<absolute file paths>...]  Same behavior as "set". Absolute paths are accepted instead of relative paths.
+ add <relative file paths>                Add files to the list.
+ rm <relative file paths>                 Remove files from the list.
+ view                                     View the list of the files without opening them.
+ edit                                     Edit the list of the files manually. Start a line with # to comment it out.
+ help                                     Print the usage text.
 
 Environment varibles:
 FF_STORAGE_FILE     Absolute path to the file where focus_files stores the list of files. Default: ~/.focus_files
@@ -28,10 +29,17 @@ EOF
   exit 1
 }
 
-add_paths() {
+add_relative_paths() {
   for p in "$@"
   do
     echo "$PWD/$p" >> "$storage_file"
+  done
+}
+
+add_absolute_paths() {
+  for p in "$@"
+  do
+    echo "$p" >> "$storage_file"
   done
 }
 
@@ -69,11 +77,25 @@ main() {
 
       echo "$PWD/$1" > "$storage_file"
       shift
-      add_paths "$@"
+      add_relative_paths "$@"
+      ;;
+    set-absolute)
+      shift
+      if [ $# -eq 0 ]; then
+        exit_if_no_storage
+
+        # clear the list
+        rm "$storage_file"
+        exit
+      fi
+
+      echo "$1" > "$storage_file"
+      shift
+      add_absolute_paths "$@"
       ;;
     add)
       shift
-      add_paths "$@"
+      add_relative_paths "$@"
       ;;
     rm)
       exit_if_no_storage
