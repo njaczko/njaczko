@@ -25,7 +25,6 @@ Plug 'dkarter/bullets.vim', { 'for': 'markdown' } " automatic bullet list format
 Plug 'AndrewRadev/inline_edit.vim', { 'on': 'InlineEdit' }
 Plug 'njaczko/vim-reslang'
 Plug 'njaczko/auto-pairs' " smart braces, parens, brackets
-Plug 'njaczko/vim-notes' " note taking
 Plug 'njaczko/nvim-dummy-text'
 Plug 'njaczko/nvim-misc'
 Plug 'hrsh7th/cmp-buffer'
@@ -38,7 +37,7 @@ call plug#end()
 " TABS, SPACES, AND FILETYPES ##################################################
 
 autocmd Filetype * setlocal tabstop=2 expandtab shiftwidth=2 smarttab
-autocmd Filetype notes,rst setlocal tabstop=3 shiftwidth=3 expandtab
+autocmd Filetype rst setlocal tabstop=3 shiftwidth=3 expandtab
 autocmd Filetype c,go,python,typescript setlocal tabstop=4 expandtab shiftwidth=4 smarttab
 " tabs instead of spaces in makefiles.
 autocmd FileType make set noexpandtab
@@ -74,7 +73,7 @@ nmap <Leader>c Vgc
 " change a word to the first spelling suggestion
 nmap <Leader>z z=1<CR>
 " skip the bullet point when editing beginning of line in notes
-autocmd Filetype notes,markdown.markdownnotes nmap a ^wi
+autocmd Filetype markdown.markdownnotes nmap a ^wi
 " textwidth wrap all the lines in the file
 nmap gQ gggqG
 " wrap a long line without having to enter visual mode
@@ -102,6 +101,13 @@ nmap <silent> <Leader>n :noh<CR>
 nmap <leader>a :mark a<CR>
 " rename token using LSP
 nmap <leader>r :lua vim.lsp.buf.rename()<CR>
+" show all references of token using LSP
+nmap gr :lua vim.lsp.buf.references()<CR>
+" TODO this waits for some reason. would a commad make more sense anyway?
+" show signature
+nmap gs :lua vim.lsp.buf.hover()<CR>
+
+lua vim.lsp.buf.signature_help()
 
 
 " COMMANDS #####################################################################
@@ -266,16 +272,31 @@ lua <<EOF
       ['kk'] = cmp.mapping.select_next_item(), -- next suggestion
     }),
     sources = cmp.config.sources({
-      { name = "path" }, -- file system paths
+      { name = 'nvim_lsp' },
+      { name = 'path' }, -- file system paths
       {
         name = 'buffer',
         option = {
+          -- keyword_pattern = [[\%(-\?\d\+\%(\.\d\+\)\?\|\h\w*\%([\-.]\w*\)*\)]], --default
+          -- matches words contain dots/dashes/underscores or postive/negative decimals.
+          -- e.g. the literals `01GY5WGP959RKBBTQ12JV0WQ09`, `123.123`, `-123.123`,
+          -- `foo.bar`, `foo-bar`, `foo_bar` are all matched. If we don't care about
+          -- matching negative decimals, we can simply use `[[\w\w*\%([\-.]\w*\)*]]` instead.
+          keyword_pattern = [[\%(\w\w*\%([\-.]\w*\)*\|-\?\d\+\%(\.\d\+\)\?\)]],
           get_bufnrs = function()
-            return vim.api.nvim_list_bufs()
+            -- poor performance indexing large files. Don't index files larger than max_size_megabytes MB
+            local max_size_megabytes = 1
+            local ret = {}
+            for _, buf in pairs(vim.api.nvim_list_bufs()) do
+              local byte_size = vim.api.nvim_buf_get_offset(buf, vim.api.nvim_buf_line_count(buf))
+              if byte_size < 1024 * 1024 * max_size_megabytes then
+                table.insert(ret, buf)
+              end
+            end
+            return ret
           end
         }
       },
-      { name = 'nvim_lsp' },
     })
   })
 
@@ -319,9 +340,6 @@ lua << EOF
   }
 EOF
 
-" opsort.vim
-" NOTE: use `gs` to sort selected text. in particular, visual block selection.
-
 " Bullets.vim
 let g:bullets_enabled_file_types = [ 'markdown', 'markdown.markdownnotes' ]
 autocmd Filetype markdown,markdown.markdownnotes inoremap <Tab> <Plug>(bullets-demote)
@@ -330,6 +348,10 @@ autocmd Filetype markdown,markdown.markdownnotes inoremap <S-Tab> <Plug>(bullets
 " work for the top bullet in a list.
 autocmd Filetype markdown.markdownnotes nmap O k<Plug>(bullets-newline)
 let g:bullets_outline_levels = ['ROM', 'ABC', 'num', 'abc', 'rom', 'std-']
+
+
+" vim-jsonnet
+let g:jsonnet_fmt_on_save = 0
 
 " SETTINGS AND MISCELLANEOUS ###################################################
 
