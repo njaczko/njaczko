@@ -10,58 +10,71 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- plugins!
 require("lazy").setup({
   {
-    "morhetz/gruvbox",
+    "njaczko/nvim-misc",
+    -- dir = "~/code/nvim-misc",
     lazy = false, priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
-      vim.cmd([[
-        " this needs to be called before colorscheme. override colorscheme and use
-        " black background
-        au ColorScheme * hi Normal ctermbg=None
-        colorscheme gruvbox
-      ]])
+      require("configure-retrobox").configureRetrobox()
     end,
   },
   {'udalov/kotlin-vim',  ft = 'kotlin' }, -- kotlin syntax highlighting
   {'google/vim-jsonnet',  ft = 'jsonnet' },
   'leafgarland/typescript-vim',
-  'ap/vim-buftabline',
-  {"evanleck/vim-svelte", branch = 'main', ft = 'svelte'}, -- svelte syntax highlighting
-  'dense-analysis/ale', -- async linting engine
+  {
+    'jose-elias-alvarez/buftabline.nvim',
+    config = function()
+      require("buftabline").setup {
+        tab_format = " #{b} ",
+        auto_hide = true,
+        hlgroups = {normal = 'Comment'}
+      }
+    end
+  },
+  {'evanleck/vim-svelte', branch = 'main', ft = 'svelte'}, -- svelte syntax highlighting
+  'dense-analysis/ale',
   {'easymotion/vim-easymotion', event =  'VeryLazy'}, -- easymotion
   'https://tpope.io/vim/repeat.git', -- repeat commands
   'https://tpope.io/vim/surround.git', -- smart braces, parens, quotes, etc.
-  'junegunn/fzf',
-  'junegunn/fzf.vim',
+  {
+    'ibhagwan/fzf-lua',
+    event = 'VeryLazy',
+    config = function()
+      require('fzf-lua').setup {'default', blines={previewer=false}}
+      vim.api.nvim_set_keymap('n', 'M', ':FzfLua blines<CR>', { noremap = true, silent = true })
+      vim.api.nvim_set_keymap('n', '<C-p>', ':FzfLua files<CR>', { noremap = true, silent = true })
+      vim.api.nvim_create_user_command( 'Rg', function() vim.cmd('FzfLua grep_project') end, {})
+      vim.api.nvim_create_user_command( 'HelpTags', function() vim.cmd('FzfLua helptags') end, {})
+    end
+  },
   {'tpope/vim-fugitive',  cmd = 'Git' },
   {'mbbill/undotree',  cmd = 'UndotreeToggle' },
-  'tpope/vim-commentary', -- block commenting
-  {'lifepillar/pgsql.vim',  ft = 'sql' }, -- postgres syntax highlighting
   'ralismark/opsort.vim', -- sort lines based on visual selection
   'nvim-treesitter/nvim-treesitter', -- LSP syntax highlighting, etc.
-  {'dkarter/bullets.vim',  ft = 'markdown' }, -- automatic bullet list formatting
+  {
+    'dkarter/bullets.vim',
+    ft = 'markdown',
+    config = function()
+      -- disable alphabetic lists.
+      vim.g.bullets_max_alpha_characters = 0
+    end,
+  }, -- automatic bullet list formatting
   {'AndrewRadev/inline_edit.vim',  cmd = 'InlineEdit' },
-  'njaczko/vim-reslang',
   'njaczko/auto-pairs', -- smart braces, parens, brackets
   'njaczko/nvim-dummy-text',
-  'njaczko/nvim-misc',
+  { "njaczko/nvim-psql",  cmd = 'PSQLInit' },
   'neovim/nvim-lspconfig',
   {
     "hrsh7th/nvim-cmp",
     event = "VeryLazy",
-    -- these dependencies will only be loaded when cmp loads
-    -- dependencies are always lazy-loaded unless specified otherwise
     dependencies = {
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       "hrsh7th/cmp-nvim-lsp",
     },
     config = function()
-      -- Set up nvim-cmp.
       local cmp = require'cmp'
-
       cmp.setup({
         preselect = cmp.PreselectMode.None,
         mapping = cmp.mapping.preset.insert({
@@ -75,12 +88,12 @@ require("lazy").setup({
           {
             name = 'buffer',
             option = {
-              -- keyword_pattern = [[\%(-\?\d\+\%(\.\d\+\)\?\|\h\w*\%([\-.]\w*\)*\)]], --default
-              -- matches words containing dots/dashes/underscores or postive/negative decimals.
-              -- e.g. the literals `01GY5WGP959RKBBTQ12JV0WQ09`, `123.123`, `-123.123`,
-              -- `foo.bar`, `foo-bar`, `foo_bar` are all matched. If we don't care about
-              -- matching negative decimals, we can simply use `[[\w\w*\%([\-.]\w*\)*]]` instead.
-              keyword_pattern = [[\%(\w\w*\%([\-.]\w*\)*\|-\?\d\+\%(\.\d\+\)\?\)]],
+              -- The default keyword_pattern, [[\%(-\?\d\+\%(\.\d\+\)\?\|\h\w*\%([\-.]\w*\)*\)]],
+              -- does not match words containing dots, such as `foo.bar`. The
+              -- regex below matches words containing dots/dashes/underscores.
+              -- e.g. the literals `01GY5WGP959RKBBTQ12JV0WQ09`, `123.123`,
+              -- `-123.123`, `foo.bar`, `foo-bar`, `foo_bar` are all matched.
+              keyword_pattern = [[\w*\%([\-.]\w*\)*\w]],
               get_bufnrs = function()
                 -- poor performance indexing large files. Don't index files larger than max_size_megabytes MB
                 local max_size_megabytes = 1
@@ -99,14 +112,12 @@ require("lazy").setup({
       })
     end,
   },
+  {'stevearc/oil.nvim', cmd = 'Oil', opts = {}},
 })
 
-local nvim_lsp = require('lspconfig')
-
-nvim_lsp['gopls'].setup{
+lspconfig = require('lspconfig')
+lspconfig.gopls.setup{
   cmd = {'gopls'},
-  on_attach = on_attach,
-  capabilities = capabilities,
   settings = {
     gopls = {
       experimentalPostfixCompletions = true,
@@ -121,29 +132,72 @@ nvim_lsp['gopls'].setup{
     usePlaceholders = true,
   }
 }
+-- from rust-analyzer book: https://rust-analyzer.github.io/book/installation.html
+lspconfig.rust_analyzer.setup({
+    settings = {
+        ["rust-analyzer"] = {
+            imports = {
+                granularity = {
+                    group = "module",
+                },
+                prefix = "self",
+            },
+            cargo = {
+                buildScripts = {
+                    enable = true,
+                },
+            },
+            procMacro = {
+                enable = false
+            },
+        }
+    }
+})
 
--- adding neovim/lspconfig causes SignColumn signs and inline virtual
--- text warnings to show up for language errors. I only want ALE to publish diagnostics
-vim.diagnostic.disable()
+vim.diagnostic.config({
+  -- don't use virtual text, don't show info and warning diagnostics.
+  virtual_text = false,
+  signs = {
+    severity = { min = vim.diagnostic.severity.ERROR },
+  },
+  underline = {
+    severity = { min = vim.diagnostic.severity.ERROR },
+  },
+})
 
 require'nvim-treesitter.configs'.setup {
-  -- A list of parser names, or "all"
-  ensure_installed = { "hcl", "gomod", "gosum"},
+ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql" },
   highlight = {
     enable = true,
-    additional_vim_regex_highlighting = false,
+    -- treesitter installs some parsers by default now. Need to
+    -- tweak the gruvbox bash highlighting to make it nicer
+    disable = { "bash" },
+    -- we need this so that the notes highlighting gets applied to markdown files.
+    additional_vim_regex_highlighting = { "markdown" },
   },
 }
+
+vim.api.nvim_create_user_command('LongLines',
+  function(opts)
+    original_tw = vim.o.tw
+    -- unclear what the max textwidth is. we effectively want inifinity here,
+    -- but in practice this is sufficient for average use cases. if a paragraph
+    -- has more than this many characters, it will just end up on multiple lines
+    vim.o.tw = 999999999
+    vim.cmd.normal('ggVGgq')
+    vim.o.tw = original_tw
+  end, {})
 
 vim.cmd([[
   " TABS, SPACES, AND FILETYPES ##################################################
 
   autocmd Filetype * setlocal tabstop=2 expandtab shiftwidth=2 smarttab
   autocmd Filetype rst setlocal tabstop=3 shiftwidth=3 expandtab
-  autocmd Filetype c,go,python,typescript,sql setlocal tabstop=4 expandtab shiftwidth=4 smarttab
+  autocmd Filetype diff,c,go,python,typescript,sql,rust setlocal tabstop=4 expandtab shiftwidth=4 smarttab
   " tabs instead of spaces in makefiles.
   autocmd FileType make set noexpandtab
   autocmd FileType help,man set number
+  autocmd Filetype go,tex set spell
 
   autocmd FileType markdown set textwidth=80
   autocmd FileType gitcommit set textwidth=50
@@ -153,8 +207,13 @@ vim.cmd([[
   autocmd BufNewFile,BufRead *.pegjs set ft=pegjs
   autocmd BufNewFile,BufRead *.tf set ft=hcl
   autocmd BufNewFile,BufRead *.hcl set ft=hcl
+  autocmd BufNewFile,BufRead *.geojson set ft=json
   autocmd BufNewFile,BufRead Jenkinsfile set ft=groovy
+  autocmd BufNewFile,BufRead *.bw set ft=bitwarden
+  autocmd BufNewFile,BufRead *.reslang set ft=reslang
 
+  autocmd BufNewFile,BufRead ~/.focus_files setlocal commentstring=#\ %s
+  autocmd FileType sql setlocal commentstring=--\ %s
 
   " MAPPINGS #####################################################################
 
@@ -162,7 +221,6 @@ vim.cmd([[
   map <c-k> 10k
   " yank to clipboard
   map Y "+y
-  nnoremap <c-w> <c-w><c-w>
   nnoremap K :w<CR>
   vnoremap K <NOP>
   nnoremap Z :q<CR>
@@ -180,12 +238,12 @@ vim.cmd([[
   " skip the bullet point when editing beginning of line in notes
   autocmd Filetype markdown.mdnotes nmap a ^wi
   " textwidth wrap all the lines in the file
-  nmap gQ gggqG
+  nmap gQ ggVGgq
   " wrap a long line without having to enter visual mode
   nmap gq Vgq
   "retain selection after `>` and `<`
-  vmap > >gv
-  vmap < <gv
+  vnoremap > >gv
+  vnoremap < <gv
   " remap normal mode arrow keys to scroll through quickfix locations
   nnoremap <Up> :lprev<CR>
   nnoremap <Down> :lnext<CR>
@@ -210,9 +268,20 @@ vim.cmd([[
   nmap gr :lua vim.lsp.buf.references()<CR>
   " show signature
   nmap <leader>h :lua vim.lsp.buf.hover()<CR>
+  " switching windows. nvim 0.10 added default <c-w> mappings that conflict
+  " with the one I'm used to. Stomp on them because I don't expect to use them.
+  unmap <c-w><c-d>
+  unmap <c-w>d
+  nnoremap <c-w> <c-w><c-w>
 
 
   " COMMANDS #####################################################################
+
+  " I can't figure out how to get the warning-level diagnostic messages to show
+  " up in the " location list or below the status line like the error messages
+  " do. so, for now, make it easy to toggle
+  command ShowDiagVirtualText :lua vim.diagnostic.config({virtual_text = true})<CR>
+  command HideDiagVirtualText :lua vim.diagnostic.config({virtual_text = false})<CR>
 
   " turn on spell checking (use [s and ]s to move between misspelled words)
   command Spell set spell
@@ -228,9 +297,9 @@ vim.cmd([[
   command -nargs=* Cal r !cal -h <args>
 
   " prettify the selected json lines. requires https://github.com/stedolan/jq
-  command -range=% PrettyJson <line1>,<line2>!jq
+  command -range=% FmtJson <line1>,<line2>!jq
   " prettify xml
-  command -range=% PrettyXML <line1>,<line2>!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
+  command -range=% FmtXML <line1>,<line2>!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
 
   " highlight column 80. off by default because of screen burn in.
   command Charbar highlight colorcolumn ctermbg=DarkGray | set colorcolumn=80
@@ -245,82 +314,47 @@ vim.cmd([[
   command Center 40vsplit empty
 
   " convert fancy bullet characters to dashes
-  command PlainBullets %s/•\|◦\|▸\|▹\|▪\|▫/-/g
+  command FmtBullets %s/•\|◦\|▸\|▹\|▪\|▫/-/g
+  command FmtQuotes %s/“\|”/"/ge |  %s/‘\|’/'/ge
+  command SmartQuotes %s/ "/ “/ge |  %s/"/”/ge
+  command FmtShellOutput %s/➜.*)/$/ge | %s/✗\|➜//ge | %s/<<<//ge
 
   " highlight the git merge conflict markers
   command MergeConflicts /<<<<<<<\|=======\|>>>>>>>
 
+  command Python !python3 %
+  command Make w | make
+  command -bang Q q
+  command -bang Qa qa
+
   " persist folds between sessions
   " views saved in ~/.local/share/nvim/view
   " makes a view for every file that is opened
-  autocmd BufWinLeave * silent! mkview
-  autocmd BufWinEnter * silent! loadview
+  autocmd BufWinLeave * if &buftype != 'terminal' | silent! mkview | endif
+  autocmd BufWinEnter * if &buftype != 'terminal' | silent! loadview | endif
 
   " close location list when closing buffer
   autocmd BufWinEnter quickfix nnoremap <silent> <buffer> q :cclose<cr>:lclose<cr>
   autocmd BufEnter * if (winnr('$') == 1 && &buftype ==# 'quickfix' ) | bd | q | endif
 
-
-  " HIGHLIGHTS ###################################################################
-
-  function ColorSchemeOverrides()
-    highlight clear SignColumn " no background for line numbers
-    " dark gray highlight for folded lines
-    highlight Folded guibg=#404040
-    highlight clear LineNr
-    highlight clear CursorLineNr
-
-    " auto highlight keywords. needs to be called after colorscheme stuff
-    hi YellowBG ctermbg=3 guibg=hotpink guifg=black ctermfg=black
-    " incomplete n char easymotion search
-    hi EasyMotionIncSearch ctermbg=none ctermfg=red
-    call matchadd('YellowBG', '<Paste>')
-    call matchadd('YellowBG', 'TODO')
-  endfunction
-
-  call ColorSchemeOverrides()
-
-  " nested bullets are confused for code blocks because they start with many
-  " spaces. code fenced with backticks is still highlighted.
-  highlight link markdownCodeBlock Normal
-  " some things that are technically invalid markdown syntax (like unescaped
-  " underscores) don't really cause issues for my use cases. the error
-  " highlights are more of a nuisance than a help for me.
-  hi link markdownError Normal
-  " syntax highlighting inside code blocks. can add more languages, these are
-  " just ones that I use often and have verified the highlighting works
-  " correctly
-  let g:markdown_fenced_languages = ['go', 'vim', 'bash', 'sql']
-
   " PLUGIN CONFIGURATION #########################################################
 
-  " vim-plug will only load the easymotion plugin when one of these commands is
+  " lazy.nvim will only load the easymotion plugin when one of these commands is
   " run. if you want to use other easymotion commands you'll have to add them to
   " the list or load the plugin all the time (~7-10ms).
   " easymotion search for 1 char
   nmap m <Plug>(easymotion-bd-f)
 
-  " fzf
-  nmap <silent> M :BLines<cr>
-  nmap <silent> <c-p> :Files<CR>
-  " highlight matched text in red instead of dark green
-  let g:fzf_colors = { 'hl': ['fg', 'Statement'], 'hl+': ['fg', 'Statement'] }
-
-  " buffers as tabs
-  set hidden
-  " vim-buftabline: only show when >1 buffers open
-  let g:buftabline_show=1
   " switching buffers
   " nmap <silent> <Left> :bprev!<CR>
   " nmap <silent> <Right> :bnext!<CR>
   nmap <silent> <c-h> :bprev!<CR>
   nmap <silent> <c-l> :bnext!<CR>
-  " close current buffer. in the future, could use some func that will exit vim
-  " when the last buffer is deleted
+  " close current buffer.
   nmap <silent> <Leader>q :bd<CR>
   nmap <silent> <Leader>Q :bd!<CR>
 
-  " jiangmiao/auto-pairs: don't do auto pairs for single and double quotes
+  " auto-pairs: don't do auto pairs for single and double quotes
   let g:AutoPairs = {'(':')', '[':']', '{':'}', '```':'```', '"""':'"""', "'''":"'''", "`":"`"}
 
   " directory-wide replace all instances of 'old' with 'new'
@@ -337,24 +371,28 @@ vim.cmd([[
   " if they are enabled but not installed. Some of the Go linters come with the
   " Go installation (e.g. gofmt) but others need to be installed separately.
   let g:ale_linters = {
-  \   'go': ['gopls', 'golint', 'gofmt', 'govet', 'goimports'],
+  \   'go': ['golangci-lint', 'gopls', 'gofmt', 'govet', 'goimports'],
+  \   'ruby': ['rubocop'],
+  \   'rust': ['rust-analyzer'],
   \}
   let g:ale_fixers = {
   \   '*': ['remove_trailing_lines', 'trim_whitespace'],
   \   'go': ['gofmt', 'goimports'],
+  \   'rust': ['rustfmt'],
+  \   'jsonnet': ['jsonnetfmt'],
   \   'markdown': ['prettier'],
   \   'python': ['black'],
-  \   'ruby': ['rubocop'],
   \}
   " NOTE: fixing legacy code sometimes results in huge diffs. don't
-  " automatically fix often-legacy filetypes. can renable these as needed:
+  " automatically fix often-legacy filetypes. can re-enable these as needed:
   " \   'markdown': ['prettier'],
   " \   'html': ['prettier'],
   " \   'javascript': ['prettier'],
   " \   'typescript': ['prettier'], " large diffs with legacy code
   " \   'yaml': ['prettier'],
 
-  autocmd Filetype go,typescript nmap gd :ALEGoToDefinition<CR>
+  autocmd Filetype go,rust nmap gd :lua vim.lsp.buf.definition()<CR>
+  autocmd Filetype help nmap gd <C-]>
 
   " nvim-cmp
   set completeopt=menu,menuone,noselect
@@ -363,7 +401,7 @@ vim.cmd([[
   " pgsql.vim. treat all sql files as postgres.
   let g:sql_type_default = 'pgsql'
 
-  " Bullets.vim
+  " Bullets.vim TODO move this in to lazy config
   let g:bullets_enabled_file_types = [ 'markdown', 'markdown.mdnotes' ]
   autocmd Filetype markdown,markdown.mdnotes inoremap <Tab> <Plug>(bullets-demote)
   autocmd Filetype markdown,markdown.mdnotes inoremap <S-Tab> <Plug>(bullets-promote)
@@ -373,12 +411,12 @@ vim.cmd([[
   let g:bullets_outline_levels = ['ROM', 'ABC', 'num', 'abc', 'rom', 'std-']
 
 
-  " vim-jsonnet
+  " disable vim-jsonnet formatting. ALE takes care of it.
   let g:jsonnet_fmt_on_save = 0
 
   " SETTINGS AND MISCELLANEOUS ###################################################
 
-  set mouse=a
+  set mouse=nv
   " only search in open folds
   set fdo-=search
 
@@ -386,27 +424,24 @@ vim.cmd([[
   let g:loaded_matchparen=1
   NoMatchParen
 
-  "hybrid relative line numbers
+  " hybrid relative line numbers, except in terminal mode.
   set number relativenumber
   augroup numbertoggle
     autocmd!
-    autocmd BufEnter,FocusGained,InsertLeave * set relativenumber
-    autocmd BufLeave,FocusLost,InsertEnter   * set norelativenumber
+    autocmd BufEnter,FocusGained,InsertLeave * if &buftype != 'terminal' | set relativenumber | endif
+    autocmd BufLeave,FocusLost,InsertEnter   * if &buftype != 'terminal' | set norelativenumber | endif
   augroup END
 
-  " shada file grows very large and takes forever to load remove this line if we
-  " miss persistent registers/marks/etc., search and command history.
-  " see :help 'shada
-  " set shada="/10,:10,@10"
-  set shada="NONE"
-
   " abbreviations
-  abbreviate teh the
+  abbreviate iferr if err != nil {<CR><Left>
   abbreviate livermap liveramp
+  abbreviate shoudl should
   abbreviate ssolrcom sso.liveramp.com
   abbreviate taht that
+  abbreviate teh the
+  abbreviate tehm them
+  abbreviate adn and
   abbreviate TOOD TODO
-  abbreviate  iferr if err != nil {<CR><Left>
 
   " handling case in search
   set ignorecase
@@ -426,6 +461,7 @@ vim.cmd([[
   autocmd BufEnter /private* set noundofile
   autocmd BufEnter /tmp* set noundofile
   autocmd BufEnter *.private set noundofile
+  autocmd FileType bitwarden set noundofile
 
   " disable netrw history
   let g:netrw_dirhistmax = 0
@@ -435,4 +471,15 @@ vim.cmd([[
   set formatoptions+=r formatoptions+=o
 
   set foldmethod=manual
+  " show max amount of output in terminal mode
+  set scrollback=100000
+
+  " terminal mode settings.
+  autocmd TermOpen  * setlocal nonumber norelativenumber statusline=zsh
+
+  " disable blinking cursor in terminal mode, which became default in nvim 0.11
+  set guicursor-=t:block-blinkon500-blinkoff500-TermCursor
+
+  " prevent `gq` formatting from using LSP, like `gofmt`
+  autocmd LspAttach * set formatexpr= formatprg=
 ]])
