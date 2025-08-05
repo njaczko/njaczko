@@ -166,7 +166,7 @@ vim.diagnostic.config({
 })
 
 require'nvim-treesitter.configs'.setup {
-ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql" },
+ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "yaml" },
   highlight = {
     enable = true,
     -- treesitter installs some parsers by default now. Need to
@@ -198,7 +198,6 @@ vim.cmd([[
   autocmd FileType make set noexpandtab
   autocmd FileType help,man set number
   autocmd Filetype go,tex set spell
-
   autocmd FileType markdown set textwidth=80
   autocmd FileType gitcommit set textwidth=50
 
@@ -482,4 +481,9 @@ vim.cmd([[
 
   " prevent `gq` formatting from using LSP, like `gofmt`
   autocmd LspAttach * set formatexpr= formatprg=
+
+  " Stop applying syntax highlighting after the 200th column. This helps
+  " rendering performance for really long lines. This was particularly painful
+  " for YAML so if this setting is annoying switch to: autocmd FileType yaml set synmaxcol=200
+  set synmaxcol=200
 ]])

@@ -60,7 +60,7 @@ alias master="git checkout master"
 alias n="nvim ~/notes/nick_jaczko.md"
 alias open_todos='list_todos | xargs nvim +/TODO'
 alias prune_branches="git branch | grep -v \"master\" | grep -v \"main\" | grep -v \"*\" | xargs git branch -D"
-alias rgf="~/code/scripts/rgf"
+alias rgf="~/code/njaczko/scripts/rgf"
 alias rgi="rg -i"
 alias sz="source ~/.zshrc"
 alias t="nvim ~/code/.throwaway"
@@ -157,8 +157,14 @@ certExpiration() {
   sslscan --no-cipher-details --no-ciphersuites --no-compression --no-fallback --no-groups --no-heartbleed --no-renegotiation $1 | rg Not.valid
 }
 
+# display the NWS hourly temperature forecast for Washington, DC
 dcHeatIndex() {
-  curl https://forecast.weather.gov/meteograms/Plotter.php\?lat\=38.9156\&lon\=-77.0526\&wfo\=LWX\&zcode\=DCZ001\&gset\=18\&gdiff\=3\&unit\=0\&tinfo\=EY5\&ahour\=0\&pcmd\=101\&lg\=en\&indu\=1\!1\!1\!\&dd\=\&bw\=\&hrspan\=48\&pqpfhr\=6\&psnwhr\=6 | wezterm imgcat --width 80%
+  curl --silent 'https://forecast.weather.gov/meteograms/Plotter.php?lat=38.9156&lon=-77.0526&wfo=LWX&zcode=DCZ001&gset=18&gdiff=3&unit=0&tinfo=EY5&ahour=0&pcmd=101&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6' | imgcat --width 80%
+}
+
+# display the NWS hourly forecast for Washington, DC
+dcWeather() {
+  curl --silent 'https://forecast.weather.gov/meteograms/Plotter.php?lat=38.9198&lon=-77.0371&wfo=LWX&zcode=DCZ001&gset=18&gdiff=3&unit=0&tinfo=EY5&ahour=0&pcmd=10100110100000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6' | imgcat --width 80%
 }
 
 # unote opens a md file named with a ULID and writes the current datetime.
