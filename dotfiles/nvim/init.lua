@@ -13,15 +13,15 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
   {
     "njaczko/nvim-misc",
-    -- dir = "~/code/nvim-misc",
+    dir = "~/code/nvim-misc",
     lazy = false, priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
       require("configure-retrobox").configureRetrobox()
     end,
   },
   {'udalov/kotlin-vim',  ft = 'kotlin' }, -- kotlin syntax highlighting
-  {'google/vim-jsonnet',  ft = 'jsonnet' },
-  'leafgarland/typescript-vim',
+  -- {'google/vim-jsonnet',  ft = 'jsonnet' },
+  -- 'leafgarland/typescript-vim',
   {
     'jose-elias-alvarez/buftabline.nvim',
     config = function()
@@ -49,7 +49,7 @@ require("lazy").setup({
     end
   },
   {'tpope/vim-fugitive',  cmd = 'Git' },
-  {'mbbill/undotree',  cmd = 'UndotreeToggle' },
+  -- {'mbbill/undotree',  cmd = 'UndotreeToggle' },
   'ralismark/opsort.vim', -- sort lines based on visual selection
   'nvim-treesitter/nvim-treesitter', -- LSP syntax highlighting, etc.
   {
@@ -113,6 +113,7 @@ require("lazy").setup({
     end,
   },
   {'stevearc/oil.nvim', cmd = 'Oil', opts = {}},
+  'mracos/mermaid.vim',
 })
 
 lspconfig = require('lspconfig')
@@ -132,27 +133,6 @@ lspconfig.gopls.setup{
     usePlaceholders = true,
   }
 }
--- from rust-analyzer book: https://rust-analyzer.github.io/book/installation.html
-lspconfig.rust_analyzer.setup({
-    settings = {
-        ["rust-analyzer"] = {
-            imports = {
-                granularity = {
-                    group = "module",
-                },
-                prefix = "self",
-            },
-            cargo = {
-                buildScripts = {
-                    enable = true,
-                },
-            },
-            procMacro = {
-                enable = false
-            },
-        }
-    }
-})
 
 vim.diagnostic.config({
   -- don't use virtual text, don't show info and warning diagnostics.
@@ -169,9 +149,6 @@ require'nvim-treesitter.configs'.setup {
 ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "yaml" },
   highlight = {
     enable = true,
-    -- treesitter installs some parsers by default now. Need to
-    -- tweak the gruvbox bash highlighting to make it nicer
-    disable = { "bash" },
     -- we need this so that the notes highlighting gets applied to markdown files.
     additional_vim_regex_highlighting = { "markdown" },
   },
@@ -209,7 +186,6 @@ vim.cmd([[
   autocmd BufNewFile,BufRead *.geojson set ft=json
   autocmd BufNewFile,BufRead Jenkinsfile set ft=groovy
   autocmd BufNewFile,BufRead *.bw set ft=bitwarden
-  autocmd BufNewFile,BufRead *.reslang set ft=reslang
 
   autocmd BufNewFile,BufRead ~/.focus_files setlocal commentstring=#\ %s
   autocmd FileType sql setlocal commentstring=--\ %s
@@ -265,6 +241,7 @@ vim.cmd([[
   nmap <leader>r :lua vim.lsp.buf.rename()<CR>
   " show all references of token using LSP
   nmap gr :lua vim.lsp.buf.references()<CR>
+  nmap gtd :lua vim.lsp.type_defintion()<CR>
   " show signature
   nmap <leader>h :lua vim.lsp.buf.hover()<CR>
   " switching windows. nvim 0.10 added default <c-w> mappings that conflict
@@ -336,6 +313,9 @@ vim.cmd([[
   autocmd BufWinEnter quickfix nnoremap <silent> <buffer> q :cclose<cr>:lclose<cr>
   autocmd BufEnter * if (winnr('$') == 1 && &buftype ==# 'quickfix' ) | bd | q | endif
 
+  " sorts the selected lines by line length
+  command -range=% SortLinesByLength <line1>,<line2>! awk '{ print length(), $0 | "sort -n | cut -d\\  -f2-" }'
+
   " PLUGIN CONFIGURATION #########################################################
 
   " lazy.nvim will only load the easymotion plugin when one of these commands is
@@ -345,14 +325,13 @@ vim.cmd([[
   nmap m <Plug>(easymotion-bd-f)
 
   " switching buffers
-  " nmap <silent> <Left> :bprev!<CR>
-  " nmap <silent> <Right> :bnext!<CR>
   nmap <silent> <c-h> :bprev!<CR>
   nmap <silent> <c-l> :bnext!<CR>
   " close current buffer.
   nmap <silent> <Leader>q :bd<CR>
   nmap <silent> <Leader>Q :bd!<CR>
 
+  " TODO move this into the auto-pairs plugin since I've already forked it.
   " auto-pairs: don't do auto pairs for single and double quotes
   let g:AutoPairs = {'(':')', '[':']', '{':'}', '```':'```', '"""':'"""', "'''":"'''", "`":"`"}
 
@@ -372,14 +351,12 @@ vim.cmd([[
   let g:ale_linters = {
   \   'go': ['golangci-lint', 'gopls', 'gofmt', 'govet', 'goimports'],
   \   'ruby': ['rubocop'],
-  \   'rust': ['rust-analyzer'],
   \}
   let g:ale_fixers = {
   \   '*': ['remove_trailing_lines', 'trim_whitespace'],
   \   'go': ['gofmt', 'goimports'],
-  \   'rust': ['rustfmt'],
   \   'jsonnet': ['jsonnetfmt'],
-  \   'markdown': ['prettier'],
+  \   'markdown': ['prettier', 'trim_whitespace', 'remove_trailing_lines'],
   \   'python': ['black'],
   \}
   " NOTE: fixing legacy code sometimes results in huge diffs. don't
@@ -390,7 +367,7 @@ vim.cmd([[
   " \   'typescript': ['prettier'], " large diffs with legacy code
   " \   'yaml': ['prettier'],
 
-  autocmd Filetype go,rust nmap gd :lua vim.lsp.buf.definition()<CR>
+  autocmd Filetype go nmap gd :lua vim.lsp.buf.definition()<CR>
   autocmd Filetype help nmap gd <C-]>
 
   " nvim-cmp
@@ -431,16 +408,17 @@ vim.cmd([[
     autocmd BufLeave,FocusLost,InsertEnter   * if &buftype != 'terminal' | set norelativenumber | endif
   augroup END
 
-  " abbreviations
+  abbreviate TOOD TODO
+  abbreviate adn and
   abbreviate iferr if err != nil {<CR><Left>
-  abbreviate livermap liveramp
+  abbreviate ot to
+  abbreviate probaly probably
   abbreviate shoudl should
-  abbreviate ssolrcom sso.liveramp.com
   abbreviate taht that
   abbreviate teh the
   abbreviate tehm them
-  abbreviate adn and
-  abbreviate TOOD TODO
+  abbreviate wiht with
+  abbreviate wtih with
 
   " handling case in search
   set ignorecase
@@ -470,11 +448,11 @@ vim.cmd([[
   set formatoptions+=r formatoptions+=o
 
   set foldmethod=manual
-  " show max amount of output in terminal mode
-  set scrollback=100000
 
   " terminal mode settings.
   autocmd TermOpen  * setlocal nonumber norelativenumber statusline=zsh
+  " show max amount of output in terminal mode
+  set scrollback=100000
 
   " disable blinking cursor in terminal mode, which became default in nvim 0.11
   set guicursor-=t:block-blinkon500-blinkoff500-TermCursor
