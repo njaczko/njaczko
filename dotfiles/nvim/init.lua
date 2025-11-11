@@ -332,10 +332,6 @@ vim.cmd([[
   nmap <silent> <Leader>q :bd<CR>
   nmap <silent> <Leader>Q :bd!<CR>
 
-  " TODO move this into the auto-pairs plugin since I've already forked it.
-  " auto-pairs: don't do auto pairs for single and double quotes
-  let g:AutoPairs = {'(':')', '[':']', '{':'}', '```':'```', '"""':'"""', "'''":"'''", "`":"`"}
-
   " directory-wide replace all instances of 'old' with 'new'
   function GlobalReplace(old, new)
     execute "args `rg" a:old "-l` | argdo %s/" . a:old . "/" . a:new . "/g | up"
