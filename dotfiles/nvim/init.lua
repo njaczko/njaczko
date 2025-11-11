@@ -19,7 +19,7 @@ require("lazy").setup({
       require("configure-retrobox").configureRetrobox()
     end,
   },
-  {'udalov/kotlin-vim',  ft = 'kotlin' }, -- kotlin syntax highlighting
+  -- {'udalov/kotlin-vim',  ft = 'kotlin' }, -- kotlin syntax highlighting
   -- {'google/vim-jsonnet',  ft = 'jsonnet' },
   -- 'leafgarland/typescript-vim',
   {
@@ -32,7 +32,7 @@ require("lazy").setup({
       }
     end
   },
-  {'evanleck/vim-svelte', branch = 'main', ft = 'svelte'}, -- svelte syntax highlighting
+  -- {'evanleck/vim-svelte', branch = 'main', ft = 'svelte'}, -- svelte syntax highlighting
   'dense-analysis/ale',
   {'easymotion/vim-easymotion', event =  'VeryLazy'}, -- easymotion
   'https://tpope.io/vim/repeat.git', -- repeat commands
@@ -146,7 +146,7 @@ vim.diagnostic.config({
 })
 
 require'nvim-treesitter.configs'.setup {
-ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "yaml" },
+ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "yaml", "json" },
   highlight = {
     enable = true,
     -- we need this so that the notes highlighting gets applied to markdown files.
@@ -241,7 +241,7 @@ vim.cmd([[
   nmap <leader>r :lua vim.lsp.buf.rename()<CR>
   " show all references of token using LSP
   nmap gr :lua vim.lsp.buf.references()<CR>
-  nmap gtd :lua vim.lsp.type_defintion()<CR>
+  nmap gtd :lua vim.lsp.buf.type_definition()<CR>
   " show signature
   nmap <leader>h :lua vim.lsp.buf.hover()<CR>
   " switching windows. nvim 0.10 added default <c-w> mappings that conflict
@@ -312,6 +312,7 @@ vim.cmd([[
   " close location list when closing buffer
   autocmd BufWinEnter quickfix nnoremap <silent> <buffer> q :cclose<cr>:lclose<cr>
   autocmd BufEnter * if (winnr('$') == 1 && &buftype ==# 'quickfix' ) | bd | q | endif
+  autocmd BufWinEnter quickfix set spell &
 
   " sorts the selected lines by line length
   command -range=% SortLinesByLength <line1>,<line2>! awk '{ print length(), $0 | "sort -n | cut -d\\  -f2-" }'
