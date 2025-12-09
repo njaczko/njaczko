@@ -24,10 +24,13 @@ export PYTHONDONTWRITEBYTECODE=1
 
 eval "$(rbenv init -)"
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+source <(fzf --zsh)
 export FZF_DEFAULT_COMMAND='{ rg --files; rg --files --null | xargs -0 dirname | sort -u; }'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
+default_branch() {
+  gh repo view --json defaultBranchRef | jq -r .defaultBranchRef.name
+}
 # delete all views except the ones for notes, not just the ones from ~/code
 alias clear_views="rm ~/.local/state/nvim/view/*"
 alias count_views="ls ~/.local/state/nvim/view/ | wc -l"
@@ -47,19 +50,17 @@ alias gad="git add ."
 alias gap="git add -p"
 alias gc="git commit -m"
 alias gcb="git checkout -b"
-alias gdmstat='git diff master --stat'
+alias gdmstat='git diff `default_branch` --stat'
 alias gl="git log --oneline"
 alias gln="git log | nvim -R"
 alias gp="git push"
 alias gs="git status"
 alias hist="history > /tmp/zsh_history && nvim -R -c 'set ft=zshhistory' /tmp/zsh_history"
 alias links="nvim ~/code/scripts/link.html"
-alias list_todos='git diff master --name-only --line-prefix=`git rev-parse --show-toplevel`/ -S"TODO"'
-alias main="git checkout main"
-alias master="git checkout master"
+alias list_todos='git diff `default_branch` --name-only --line-prefix=`git rev-parse --show-toplevel`/ -S"TODO"'
 alias n="nvim ~/notes/nick_jaczko.md"
 alias open_todos='list_todos | xargs nvim +/TODO'
-alias prune_branches="git branch | grep -v \"master\" | grep -v \"main\" | grep -v \"*\" | xargs git branch -D"
+alias prune_branches='git branch | grep -v "`default_branch`" | | grep -v "*" | xargs git branch -D'
 alias rgf="~/code/njaczko/scripts/rgf"
 alias rgi="rg -i"
 alias sz="source ~/.zshrc"
@@ -74,6 +75,7 @@ alias wezrc="nvim ~/.wezterm.lua"
 alias wt="~/code/scripts/time"
 alias zshenv="nvim ~/.zshenv"
 alias zshrc="nvim ~/.zshrc"
+alias riprc="nvim ~/.ripgreprc"
 alias txts='dig @8.8.8.8 +short -t txt'
 # copy current branch name to clipboard
 alias branch='git rev-parse --abbrev-ref HEAD | pbcopy'
@@ -85,7 +87,7 @@ alias ed="ed -p'>'"
 # more wttr info: https://github.com/chubin/wttr.in
 alias weather="curl 'wttr.in/Washington?1F'"
 alias sunset="curl 'wttr.in/Washington?format=%s'"
-alias view="gh pr view -w"
+alias ghrepo="gh repo view -w"
 
 # for jump: https://github.com/gsamokovarov/jump
 eval "$(jump shell)"
@@ -100,8 +102,14 @@ gclone() {
   cd  $(ls -1t | head -n1)
 }
 
+# ghpr opens the current PR in the browser if no args were provided. Otherwise,
+# it checks out the provided PR number locally.
 ghpr() {
-  gh pr checkout $1
+  if [ $# -eq 0 ]; then
+    gh pr view -w
+  else
+    gh pr checkout $1
+  fi
 }
 
 gphead() {
@@ -121,11 +129,11 @@ cgi() {
 }
 
 rgo() {
-  rg $@ -l | xargs nvim
+  rg $@ -l | xargs nvim +/"$@"
 }
 
 rgio() {
-  rg -i $@ -l | xargs nvim
+  rg -i $@ -l | xargs nvim +/"$@"
 }
 
 diffself() {
@@ -140,7 +148,7 @@ diffself() {
 # $1 must be a relative file path
 diffmaster() {
   master=".master.$(basename $1)"
-  git show "master:./$1" > $master
+  git show "$(default_branch):./$1" > $master
   nvim -d $master $1
   rm $master
 }
@@ -157,14 +165,24 @@ certExpiration() {
   sslscan --no-cipher-details --no-ciphersuites --no-compression --no-fallback --no-groups --no-heartbleed --no-renegotiation $1 | rg Not.valid
 }
 
-# display the NWS hourly temperature forecast for Washington, DC
+# display the National Weather Service hourly temperature forecast for Washington, DC
 dcHeatIndex() {
-  curl --silent 'https://forecast.weather.gov/meteograms/Plotter.php?lat=38.9156&lon=-77.0526&wfo=LWX&zcode=DCZ001&gset=18&gdiff=3&unit=0&tinfo=EY5&ahour=0&pcmd=101&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6' | imgcat --width 80%
+  curl --silent 'https://forecast.weather.gov/meteograms/Plotter.php?lat=38.9156&lon=-77.0526&wfo=LWX&zcode=DCZ001&gset=18&gdiff=3&unit=0&tinfo=EY5&ahour=0&pcmd=101&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6' | \
+    imgcat --width 80%
 }
 
 # display the NWS hourly forecast for Washington, DC
+# UI: https://forecast.weather.gov/MapClick.php?lat=38.9198&lon=-77.0371&unit=0&lg=english&FcstType=graphical
 dcWeather() {
-  curl --silent 'https://forecast.weather.gov/meteograms/Plotter.php?lat=38.9198&lon=-77.0371&wfo=LWX&zcode=DCZ001&gset=18&gdiff=3&unit=0&tinfo=EY5&ahour=0&pcmd=10100110100000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6' | imgcat --width 80%
+  # includes heat index, excludes snow, sleet, and freezing rain.
+  warm_pcmd='10100110100000000000000000000000000000000000000000000000000'
+  # includes wind chill, snow
+  winter_pcmd='10010110101000000000000000000000000000000000000000000000000'
+  # winter_pcmd as well as freezing rain and sleet
+  detailed_winter_pcmd='10010110101110000000000000000000000000000000000000000000000'
+  curl --silent "https://forecast.weather.gov/meteograms/Plotter.php?lat=38.9198&lon=-77.0371&wfo=LWX&zcode=DCZ001&gset=18&gdiff=3&unit=0&tinfo=EY5&ahour=0&pcmd=$winter_pcmd&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6" | \
+    imgcat --width 80%
+  echo "Today's sunset: $(curl --silent 'wttr.in/Washington?format=%s')"
 }
 
 # unote opens a md file named with a ULID and writes the current datetime.
@@ -189,12 +207,20 @@ allunotes() {
   ls -1 | grep '^01' | sort -r
 }
 
+master() {
+  git checkout $(gh repo view --json defaultBranchRef | jq -r .defaultBranchRef.name)
+}
+
 gdm() {
   if [[ -z "$1" ]]; then
-    git diff master | nvim -R;
+    git diff $(default_branch) | nvim -R;
   else
-    git diff master -- "$1" | nvim -R;
+    git diff $(default_branch) -- "$1" | nvim -R;
   fi
+}
+
+gmm() {
+  git merge $(default_branch)
 }
 
 # opens files that have the merge conflict markers
@@ -209,4 +235,9 @@ qlf() {
 
 ef() {
   rg --files | rg -i "$1" | xargs nvim
+}
+
+# print the current UTC time in the RFC3339 format.
+now() {
+  date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
