@@ -14,19 +14,7 @@ uuid() {
   uuidgen | tr '[:upper:]' '[:lower:]'
 }
 
-# print out the current time in RFC3339 format
-now() {
-  gdate --rfc-3339=seconds | sed 's/ /T/'
-}
-
-# print out the RFC3339 timestamp for 24 hours from now
-tomorrow() {
-  gdate --date="+1 day" --rfc-3339=seconds | sed 's/ /T/'
-}
-
 case "$HOME" in
   '/Users/njaczk') source $HOME/code/nick/bin/ramp.zsh;;
   *) ;;
 esac
-
-. "$HOME/.cargo/env"

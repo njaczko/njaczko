@@ -13,13 +13,11 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
   {
     "njaczko/nvim-misc",
-    dir = "~/code/nvim-misc",
     lazy = false, priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
       require("configure-retrobox").configureRetrobox()
     end,
   },
-  -- {'udalov/kotlin-vim',  ft = 'kotlin' }, -- kotlin syntax highlighting
   -- {'google/vim-jsonnet',  ft = 'jsonnet' },
   -- 'leafgarland/typescript-vim',
   {
@@ -32,7 +30,6 @@ require("lazy").setup({
       }
     end
   },
-  -- {'evanleck/vim-svelte', branch = 'main', ft = 'svelte'}, -- svelte syntax highlighting
   'dense-analysis/ale',
   {'easymotion/vim-easymotion', event =  'VeryLazy'}, -- easymotion
   'https://tpope.io/vim/repeat.git', -- repeat commands
@@ -51,7 +48,22 @@ require("lazy").setup({
   {'tpope/vim-fugitive',  cmd = 'Git' },
   -- {'mbbill/undotree',  cmd = 'UndotreeToggle' },
   'ralismark/opsort.vim', -- sort lines based on visual selection
-  'nvim-treesitter/nvim-treesitter', -- LSP syntax highlighting, etc.
+  {
+    'nvim-treesitter/nvim-treesitter',
+    branch = 'main',
+    lazy = false,
+    build = ':TSUpdate',
+    config = function()
+      require('nvim-treesitter').install { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "json" }
+      -- this is necessary to layer the custom note highlighting on top of the Treesitter markdown highlighting.
+      vim.api.nvim_create_autocmd( 'FileType', { pattern = 'markdown.mdnotes',
+        callback = function(ev)
+          vim.treesitter.start(ev.buf, 'markdown')
+          vim.bo[ev.buf].syntax = 'ON'
+        end
+      })
+    end
+  },
   {
     'dkarter/bullets.vim',
     ft = 'markdown',
@@ -64,7 +76,6 @@ require("lazy").setup({
   'njaczko/auto-pairs', -- smart braces, parens, brackets
   'njaczko/nvim-dummy-text',
   { "njaczko/nvim-psql",  cmd = 'PSQLInit' },
-  'neovim/nvim-lspconfig',
   {
     "hrsh7th/nvim-cmp",
     event = "VeryLazy",
@@ -116,8 +127,7 @@ require("lazy").setup({
   'mracos/mermaid.vim',
 })
 
-lspconfig = require('lspconfig')
-lspconfig.gopls.setup{
+vim.lsp.config["gopls"] ={
   cmd = {'gopls'},
   settings = {
     gopls = {
@@ -135,8 +145,6 @@ lspconfig.gopls.setup{
 }
 
 vim.diagnostic.config({
-  -- don't use virtual text, don't show info and warning diagnostics.
-  virtual_text = false,
   signs = {
     severity = { min = vim.diagnostic.severity.ERROR },
   },
@@ -144,15 +152,6 @@ vim.diagnostic.config({
     severity = { min = vim.diagnostic.severity.ERROR },
   },
 })
-
-require'nvim-treesitter.configs'.setup {
-ensure_installed = { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "yaml", "json" },
-  highlight = {
-    enable = true,
-    -- we need this so that the notes highlighting gets applied to markdown files.
-    additional_vim_regex_highlighting = { "markdown" },
-  },
-}
 
 vim.api.nvim_create_user_command('LongLines',
   function(opts)
@@ -174,7 +173,7 @@ vim.cmd([[
   " tabs instead of spaces in makefiles.
   autocmd FileType make set noexpandtab
   autocmd FileType help,man set number
-  autocmd Filetype go,tex set spell
+  autocmd Filetype go,tex set spell noexpandtab
   autocmd FileType markdown set textwidth=80
   autocmd FileType gitcommit set textwidth=50
 
@@ -189,6 +188,7 @@ vim.cmd([[
 
   autocmd BufNewFile,BufRead ~/.focus_files setlocal commentstring=#\ %s
   autocmd FileType sql setlocal commentstring=--\ %s
+  autocmd FileType smarty setlocal commentstring=#\ %s
 
   " MAPPINGS #####################################################################
 
@@ -219,9 +219,6 @@ vim.cmd([[
   "retain selection after `>` and `<`
   vnoremap > >gv
   vnoremap < <gv
-  " remap normal mode arrow keys to scroll through quickfix locations
-  nnoremap <Up> :lprev<CR>
-  nnoremap <Down> :lnext<CR>
   " base64 encode/decode selected text
   vnoremap <leader>e c<c-r>=substitute(system('base64', @"), '\n', '', '')<cr><esc>
   vnoremap <leader>d c<c-r>=system('base64 --decode', @")<cr><esc>
@@ -239,9 +236,12 @@ vim.cmd([[
   nmap <leader>a :mark a<CR>
   " rename token using LSP
   nmap <leader>r :lua vim.lsp.buf.rename()<CR>
-  " show all references of token using LSP
+  " jumping to definitions, references, and implementations
   nmap gr :lua vim.lsp.buf.references()<CR>
   nmap gtd :lua vim.lsp.buf.type_definition()<CR>
+  nmap gti :lua vim.lsp.buf.implementation()<CR>
+  autocmd Filetype go nmap gd :lua vim.lsp.buf.definition()<CR>
+  autocmd Filetype help nmap gd <C-]>
   " show signature
   nmap <leader>h :lua vim.lsp.buf.hover()<CR>
   " switching windows. nvim 0.10 added default <c-w> mappings that conflict
@@ -254,7 +254,7 @@ vim.cmd([[
   " COMMANDS #####################################################################
 
   " I can't figure out how to get the warning-level diagnostic messages to show
-  " up in the " location list or below the status line like the error messages
+  " up in the location list or below the status line like the error messages
   " do. so, for now, make it easy to toggle
   command ShowDiagVirtualText :lua vim.diagnostic.config({virtual_text = true})<CR>
   command HideDiagVirtualText :lua vim.diagnostic.config({virtual_text = false})<CR>
@@ -276,6 +276,8 @@ vim.cmd([[
   command -range=% FmtJson <line1>,<line2>!jq
   " prettify xml
   command -range=% FmtXML <line1>,<line2>!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
+  " Wrap lines with quotes, append commas
+  command -range=% FmtList silent <line1>,<line2>s/^/"/g | <line1>,<line2>s/$/",/g | noh
 
   " highlight column 80. off by default because of screen burn in.
   command Charbar highlight colorcolumn ctermbg=DarkGray | set colorcolumn=80
@@ -294,6 +296,7 @@ vim.cmd([[
   command FmtQuotes %s/“\|”/"/ge |  %s/‘\|’/'/ge
   command SmartQuotes %s/ "/ “/ge |  %s/"/”/ge
   command FmtShellOutput %s/➜.*)/$/ge | %s/✗\|➜//ge | %s/<<<//ge
+  command -nargs=1 Count :%s/<args>//gn
 
   " highlight the git merge conflict markers
   command MergeConflicts /<<<<<<<\|=======\|>>>>>>>
@@ -358,14 +361,10 @@ vim.cmd([[
   \}
   " NOTE: fixing legacy code sometimes results in huge diffs. don't
   " automatically fix often-legacy filetypes. can re-enable these as needed:
-  " \   'markdown': ['prettier'],
   " \   'html': ['prettier'],
   " \   'javascript': ['prettier'],
   " \   'typescript': ['prettier'], " large diffs with legacy code
   " \   'yaml': ['prettier'],
-
-  autocmd Filetype go nmap gd :lua vim.lsp.buf.definition()<CR>
-  autocmd Filetype help nmap gd <C-]>
 
   " nvim-cmp
   set completeopt=menu,menuone,noselect
@@ -407,6 +406,7 @@ vim.cmd([[
 
   abbreviate TOOD TODO
   abbreviate adn and
+  abbreviate exaclty exactly
   abbreviate iferr if err != nil {<CR><Left>
   abbreviate ot to
   abbreviate probaly probably
@@ -416,13 +416,13 @@ vim.cmd([[
   abbreviate tehm them
   abbreviate wiht with
   abbreviate wtih with
+  abbreviate vimft vim: ft=markdown.mdnotes foldmethod=marker
 
   " handling case in search
   set ignorecase
   set smartcase
 
   " show file name in status line
-  set laststatus=2
   set statusline=%f
 
   " Use persistent history to allow undo after file close
@@ -431,7 +431,6 @@ vim.cmd([[
   endif
   set undofile undodir=/tmp/.vim-undo-dir
   " disable undofiles for some files that might contain secrets
-  autocmd BufEnter *.credentials.json set noundofile
   autocmd BufEnter /private* set noundofile
   autocmd BufEnter /tmp* set noundofile
   autocmd BufEnter *.private set noundofile
@@ -444,9 +443,7 @@ vim.cmd([[
   " `o`/`O` in normal mode. see `:h fo-table` for more.
   set formatoptions+=r formatoptions+=o
 
-  set foldmethod=manual
-
-  " terminal mode settings.
+  " terminal mode settings
   autocmd TermOpen  * setlocal nonumber norelativenumber statusline=zsh
   " show max amount of output in terminal mode
   set scrollback=100000
@@ -454,11 +451,17 @@ vim.cmd([[
   " disable blinking cursor in terminal mode, which became default in nvim 0.11
   set guicursor-=t:block-blinkon500-blinkoff500-TermCursor
 
+  set scrolloff=5
+
   " prevent `gq` formatting from using LSP, like `gofmt`
   autocmd LspAttach * set formatexpr= formatprg=
 
   " Stop applying syntax highlighting after the 200th column. This helps
-  " rendering performance for really long lines. This was particularly painful
-  " for YAML so if this setting is annoying switch to: autocmd FileType yaml set synmaxcol=200
-  set synmaxcol=200
+  " rendering performance for really long lines.
+  autocmd FileType yaml,json set synmaxcol=200
+
+  " /Users/nick/code/nvim-misc/go/cmd/extendjournal/extendjournal.go
+  command -range ExtendJournal <line1>,<line2>!extendjournal
+  " Example of a command that will pipe the selection and pass args when it shells out:
+   command -range -nargs=* Go <line1>,<line2>!go run /Users/nick/code/nvim-misc/go/cmd/example/example.go <args>
 ]])

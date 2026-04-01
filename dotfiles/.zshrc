@@ -8,7 +8,6 @@ SAVEHIST=100000
 
 plugins=(
   vi-mode
-  web-search
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -20,7 +19,9 @@ export PATH="$PATH:$HOME//go/bin"
 export PATH="$PATH:$HOME/Library/Python/3.8/bin"
 export PATH="$PATH:/opt/homebrew/bin"
 export PATH="$PATH:/usr/local/bin"
-export PYTHONDONTWRITEBYTECODE=1
+export PATH="$HOME/.local/bin:$PATH"
+
+. "$HOME/.local/bin/env"
 
 eval "$(rbenv init -)"
 
@@ -31,6 +32,7 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 default_branch() {
   gh repo view --json defaultBranchRef | jq -r .defaultBranchRef.name
 }
+
 # delete all views except the ones for notes, not just the ones from ~/code
 alias clear_views="rm ~/.local/state/nvim/view/*"
 alias count_views="ls ~/.local/state/nvim/view/ | wc -l"
@@ -87,7 +89,6 @@ alias ed="ed -p'>'"
 # more wttr info: https://github.com/chubin/wttr.in
 alias weather="curl 'wttr.in/Washington?1F'"
 alias sunset="curl 'wttr.in/Washington?format=%s'"
-alias ghrepo="gh repo view -w"
 
 # for jump: https://github.com/gsamokovarov/jump
 eval "$(jump shell)"
@@ -98,6 +99,7 @@ fco() {
 }
 
 gclone() {
+  cd ~/code
   git clone $(pbpaste)
   cd  $(ls -1t | head -n1)
 }
@@ -112,8 +114,16 @@ ghpr() {
   fi
 }
 
+ghrepo() {
+  gh repo view -w
+}
+
 gphead() {
   git push --set-upstream origin $(git rev-parse --abbrev-ref HEAD) && gh pr create -w
+}
+
+gshow() {
+  git show $1 | nvim
 }
 
 cg() {
@@ -153,6 +163,14 @@ diffmaster() {
   rm $master
 }
 
+# potus prints a cleaned-up and sorted version of the President's public
+# schedule. Accepts an optional integer arg to specify how many events to
+# display. Default is 20 events.
+potus() {
+  curl https://media-cdn.factba.se/rss/json/trump/calendar-full.json | \
+    jq "sort_by(.date, .time)  | reverse | .[range("${1:-20}")] | {date, time_formatted, details, location}" | \
+    nvim -R -c "set ft=json"
+}
 # depends on the oil.nvim plugin. $1 must be a file path.
 oil() {
   nvim -c ":Oil $1"
@@ -237,7 +255,38 @@ ef() {
   rg --files | rg -i "$1" | xargs nvim
 }
 
-# print the current UTC time in the RFC3339 format.
+# yamlToJson accepts a path to a (templated) yaml file. templated files just
+# have the template lines deleted, which isn't foolproof.
+yamlToJson() {
+  if [[ "$1" == "*.yml.tpl" ]]; then
+    cat $1 | sed '/\<\<.*\>\>/d' | yq -ojson | nvim -R -c 'set ft=json'
+  else
+    yq -ojson | nvim -R -c 'set ft=json'
+  fi
+}
+
+# jsonToYaml accepts a path to a json file and translates it to YAML
+jsonToYaml() {
+  yq -p=json -o=yaml $1
+}
+
+
+# Print the current UTC time in the RFC3339 format.
 now() {
   date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+# Open tracking for a USPS trackingnumber. example: `usps 9334610597205187365204`
+usps() {
+  open "https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=$1"
+}
+
+# Open tracking for a FedEx trackingnumber. example: `fedex 887229240339`
+fedex() {
+  open "https://www.fedex.com/fedextrack/?trknbr=$1"
+}
+
+# Open tracking for a UPS trackingnumber. example: `ups 1Z8861540330854586`
+ups() {
+  open "https://www.ups.com/track?track=yes&trackNums=$1"
 }
