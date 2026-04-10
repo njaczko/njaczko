@@ -54,7 +54,12 @@ require("lazy").setup({
     lazy = false,
     build = ':TSUpdate',
     config = function()
-      require('nvim-treesitter').install { "go", "gomod", "gosum", "hcl", "jsonnet", "ruby", "sql", "json" }
+      require('nvim-treesitter').install { 'go', 'gomod', 'gosum', 'hcl', 'jsonnet', 'ruby', 'sql', 'json', 'powershell' }
+      vim.api.nvim_create_autocmd( 'FileType', {
+        callback = function(ev)
+          vim.treesitter.start(ev.buf)
+        end
+      })
       -- this is necessary to layer the custom note highlighting on top of the Treesitter markdown highlighting.
       vim.api.nvim_create_autocmd( 'FileType', { pattern = 'markdown.mdnotes',
         callback = function(ev)
@@ -75,7 +80,6 @@ require("lazy").setup({
   {'AndrewRadev/inline_edit.vim',  cmd = 'InlineEdit' },
   'njaczko/auto-pairs', -- smart braces, parens, brackets
   'njaczko/nvim-dummy-text',
-  { "njaczko/nvim-psql",  cmd = 'PSQLInit' },
   {
     "hrsh7th/nvim-cmp",
     event = "VeryLazy",
@@ -127,7 +131,7 @@ require("lazy").setup({
   'mracos/mermaid.vim',
 })
 
-vim.lsp.config["gopls"] ={
+vim.lsp.config["gopls"] = {
   cmd = {'gopls'},
   settings = {
     gopls = {
@@ -152,17 +156,6 @@ vim.diagnostic.config({
     severity = { min = vim.diagnostic.severity.ERROR },
   },
 })
-
-vim.api.nvim_create_user_command('LongLines',
-  function(opts)
-    original_tw = vim.o.tw
-    -- unclear what the max textwidth is. we effectively want inifinity here,
-    -- but in practice this is sufficient for average use cases. if a paragraph
-    -- has more than this many characters, it will just end up on multiple lines
-    vim.o.tw = 999999999
-    vim.cmd.normal('ggVGgq')
-    vim.o.tw = original_tw
-  end, {})
 
 vim.cmd([[
   " TABS, SPACES, AND FILETYPES ##################################################
@@ -370,9 +363,6 @@ vim.cmd([[
   set completeopt=menu,menuone,noselect
   set pumheight=10
 
-  " pgsql.vim. treat all sql files as postgres.
-  let g:sql_type_default = 'pgsql'
-
   " Bullets.vim TODO move this in to lazy config
   let g:bullets_enabled_file_types = [ 'markdown', 'markdown.mdnotes' ]
   autocmd Filetype markdown,markdown.mdnotes inoremap <Tab> <Plug>(bullets-demote)
@@ -459,9 +449,4 @@ vim.cmd([[
   " Stop applying syntax highlighting after the 200th column. This helps
   " rendering performance for really long lines.
   autocmd FileType yaml,json set synmaxcol=200
-
-  " /Users/nick/code/nvim-misc/go/cmd/extendjournal/extendjournal.go
-  command -range ExtendJournal <line1>,<line2>!extendjournal
-  " Example of a command that will pipe the selection and pass args when it shells out:
-   command -range -nargs=* Go <line1>,<line2>!go run /Users/nick/code/nvim-misc/go/cmd/example/example.go <args>
 ]])
