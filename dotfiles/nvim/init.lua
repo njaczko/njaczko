@@ -57,11 +57,12 @@ require("lazy").setup({
       require('nvim-treesitter').install { 'go', 'gomod', 'gosum', 'hcl', 'jsonnet', 'ruby', 'sql', 'json', 'powershell' }
       vim.api.nvim_create_autocmd( 'FileType', {
         callback = function(ev)
-          vim.treesitter.start(ev.buf)
+          pcall(vim.treesitter.start, ev.buf)
         end
       })
       -- this is necessary to layer the custom note highlighting on top of the Treesitter markdown highlighting.
-      vim.api.nvim_create_autocmd( 'FileType', { pattern = 'markdown.mdnotes',
+      vim.api.nvim_create_autocmd( 'FileType', {
+        pattern = 'markdown.mdnotes',
         callback = function(ev)
           vim.treesitter.start(ev.buf, 'markdown')
           vim.bo[ev.buf].syntax = 'ON'
@@ -289,7 +290,7 @@ vim.cmd([[
   command FmtQuotes %s/“\|”/"/ge |  %s/‘\|’/'/ge
   command SmartQuotes %s/ "/ “/ge |  %s/"/”/ge
   command FmtShellOutput %s/➜.*)/$/ge | %s/✗\|➜//ge | %s/<<<//ge
-  command -nargs=1 Count :%s/<args>//gn
+  command -range=% -nargs=1 Count :<line1>,<line2>s/<args>//gn
 
   " highlight the git merge conflict markers
   command MergeConflicts /<<<<<<<\|=======\|>>>>>>>
