@@ -2,35 +2,56 @@
 -- nvim expects to find this file at ~/.config/nvim/init.lua
 
 -- bootstrap lazy.nvim
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
   vim.fn.system({
-    "git", "clone", "--filter=blob:none", "https://github.com/folke/lazy.nvim.git", "--branch=stable", lazypath,
+    'git', 'clone', '--filter=blob:none', 'https://github.com/folke/lazy.nvim.git', '--branch=stable', lazypath,
   })
 end
 vim.opt.rtp:prepend(lazypath)
 
-require("lazy").setup({
+require('lazy').setup({
   {
-    "njaczko/nvim-misc",
+    'njaczko/nvim-misc',
     lazy = false, priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
-      require("configure-retrobox").configureRetrobox()
+      require('configure-retrobox').configureRetrobox()
     end,
   },
-  -- {'google/vim-jsonnet',  ft = 'jsonnet' },
-  -- 'leafgarland/typescript-vim',
   {
     'jose-elias-alvarez/buftabline.nvim',
     config = function()
-      require("buftabline").setup {
-        tab_format = " #{b} ",
+      require('buftabline').setup {
+        tab_format = ' #{b} ',
         auto_hide = true,
         hlgroups = {normal = 'Comment'}
       }
     end
   },
-  'dense-analysis/ale',
+  {
+    'dense-analysis/ale',
+    config = function()
+      vim.g.ale_lint_on_text_changed = 'never' -- only lint on save
+      vim.g.ale_virtualtext_cursor = 0
+      vim.g.ale_fix_on_save = 1
+      -- all of the linters need to be installed in order to work. ALE will not warn
+      -- if they are enabled but not installed. Some of the Go linters come with the
+      -- Go installation (e.g. gofmt) but others need to be installed separately.
+      vim.g.ale_linters = {
+         go = { 'golangci-lint', 'gopls', 'gofmt', 'govet', 'goimports' },
+         ruby = { 'rubocop' },
+      }
+      vim.g.ale_fixers = {
+        ['*'] = { 'remove_trailing_lines', 'trim_whitespace' },
+        go = { 'gofmt', 'goimports' },
+        jsonnet = { 'jsonnetfmt' },
+        markdown = { 'prettier', 'trim_whitespace', 'remove_trailing_lines' },
+        python = { 'black' },
+        yaml = { 'prettier' },
+      }
+      vim.g.jsonnet_fmt_on_save = 0 -- disable vim-jsonnet formatting. ALE takes care of it.
+    end
+  },
   {'easymotion/vim-easymotion', event =  'VeryLazy'}, -- easymotion
   'https://tpope.io/vim/repeat.git', -- repeat commands
   'https://tpope.io/vim/surround.git', -- smart braces, parens, quotes, etc.
@@ -46,7 +67,6 @@ require("lazy").setup({
     end
   },
   {'tpope/vim-fugitive',  cmd = 'Git' },
-  -- {'mbbill/undotree',  cmd = 'UndotreeToggle' },
   'ralismark/opsort.vim', -- sort lines based on visual selection
   {
     'nvim-treesitter/nvim-treesitter',
@@ -71,23 +91,34 @@ require("lazy").setup({
     end
   },
   {
-    'dkarter/bullets.vim',
+    'dkarter/bullets.vim', -- automatic bullet list formatting
     ft = 'markdown',
     config = function()
       -- disable alphabetic lists.
       vim.g.bullets_max_alpha_characters = 0
+      vim.g.bullets_enabled_file_types = { 'markdown', 'markdown.mdnotes' }
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "markdown", "markdown.mdnotes" },
+        callback = function(ev)
+          vim.keymap.set("i", "<Tab>", "<Plug>(bullets-demote)", { buffer = ev.buf })
+          vim.keymap.set("i", "<S-Tab>", "<Plug>(bullets-promote)", { buffer = ev.buf })
+          -- an imperfect solution for inserting bullets above the current line. doesn't
+          -- work for the top bullet in a list.
+          vim.keymap.set("n", "O", "k<Plug>(bullets-newline)", { buffer = ev.buf })
+        end,
+      })
     end,
-  }, -- automatic bullet list formatting
+  },
   {'AndrewRadev/inline_edit.vim',  cmd = 'InlineEdit' },
   'njaczko/auto-pairs', -- smart braces, parens, brackets
   'njaczko/nvim-dummy-text',
   {
-    "hrsh7th/nvim-cmp",
-    event = "VeryLazy",
+    'hrsh7th/nvim-cmp',
+    event = 'VeryLazy',
     dependencies = {
-      "hrsh7th/cmp-buffer",
-      "hrsh7th/cmp-path",
-      "hrsh7th/cmp-nvim-lsp",
+      'hrsh7th/cmp-buffer',
+      'hrsh7th/cmp-path',
+      'hrsh7th/cmp-nvim-lsp',
     },
     config = function()
       local cmp = require'cmp'
@@ -126,13 +157,18 @@ require("lazy").setup({
           },
         })
       })
+      vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
+      vim.opt.pumheight = 10
     end,
   },
   {'stevearc/oil.nvim', cmd = 'Oil', opts = {}},
   'mracos/mermaid.vim',
+  -- {'google/vim-jsonnet',  ft = 'jsonnet' },
+  -- 'leafgarland/typescript-vim',
+  -- {'mbbill/undotree',  cmd = 'UndotreeToggle' },
 })
 
-vim.lsp.config["gopls"] = {
+vim.lsp.config['gopls'] = {
   cmd = {'gopls'},
   settings = {
     gopls = {
@@ -159,8 +195,6 @@ vim.diagnostic.config({
 })
 
 vim.cmd([[
-  " TABS, SPACES, AND FILETYPES ##################################################
-
   autocmd Filetype * setlocal tabstop=2 expandtab shiftwidth=2 smarttab
   autocmd Filetype rst setlocal tabstop=3 shiftwidth=3 expandtab
   autocmd Filetype diff,c,go,python,typescript,sql,rust setlocal tabstop=4 expandtab shiftwidth=4 smarttab
@@ -171,7 +205,6 @@ vim.cmd([[
   autocmd FileType markdown set textwidth=80
   autocmd FileType gitcommit set textwidth=50
 
-  " filetypes
   autocmd BufNewFile,BufRead *.tsx set ft=typescript
   autocmd BufNewFile,BufRead *.pegjs set ft=pegjs
   autocmd BufNewFile,BufRead *.tf set ft=hcl
@@ -244,6 +277,19 @@ vim.cmd([[
   unmap <c-w>d
   nnoremap <c-w> <c-w><c-w>
 
+  " lazy.nvim will only load the easymotion plugin when one of these commands is
+  " run. if you want to use other easymotion commands you'll have to add them to
+  " the list or load the plugin all the time (~7-10ms).
+  " easymotion search for 1 char
+  nmap m <Plug>(easymotion-bd-f)
+
+  " switching buffers
+  nmap <silent> <c-h> :bprev!<CR>
+  nmap <silent> <c-l> :bnext!<CR>
+  " close current buffer.
+  nmap <silent> <Leader>q :bd<CR>
+  nmap <silent> <Leader>Q :bd!<CR>
+
 
   " COMMANDS #####################################################################
 
@@ -262,13 +308,17 @@ vim.cmd([[
   command Nowrap set nowrap
   command Norel set norelativenumber
   command Rel set relativenumber
+
+  " directory-wide replace all instances of 'old' with 'new'
+  function GlobalReplace(old, new)
+    execute "args `rg" a:old "-l` | argdo %s/" . a:old . "/" . a:new . "/g | up"
+  endfunction
   command -nargs=* GlobalReplace call GlobalReplace(<f-args>)
+
   command Source source $MYVIMRC
   command -nargs=* Cal r !cal -h <args>
 
-  " prettify the selected json lines. requires https://github.com/stedolan/jq
   command -range=% FmtJson <line1>,<line2>!jq
-  " prettify xml
   command -range=% FmtXML <line1>,<line2>!python3 -c "import xml.dom.minidom, sys; print(xml.dom.minidom.parse(sys.stdin).toprettyxml())"
   " Wrap lines with quotes, append commas
   command -range=% FmtList silent <line1>,<line2>s/^/"/g | <line1>,<line2>s/$/",/g | noh
@@ -313,69 +363,6 @@ vim.cmd([[
 
   " sorts the selected lines by line length
   command -range=% SortLinesByLength <line1>,<line2>! awk '{ print length(), $0 | "sort -n | cut -d\\  -f2-" }'
-
-  " PLUGIN CONFIGURATION #########################################################
-
-  " lazy.nvim will only load the easymotion plugin when one of these commands is
-  " run. if you want to use other easymotion commands you'll have to add them to
-  " the list or load the plugin all the time (~7-10ms).
-  " easymotion search for 1 char
-  nmap m <Plug>(easymotion-bd-f)
-
-  " switching buffers
-  nmap <silent> <c-h> :bprev!<CR>
-  nmap <silent> <c-l> :bnext!<CR>
-  " close current buffer.
-  nmap <silent> <Leader>q :bd<CR>
-  nmap <silent> <Leader>Q :bd!<CR>
-
-  " directory-wide replace all instances of 'old' with 'new'
-  function GlobalReplace(old, new)
-    execute "args `rg" a:old "-l` | argdo %s/" . a:old . "/" . a:new . "/g | up"
-  endfunction
-
-  " ALE
-  " only lint on save
-  let g:ale_lint_on_text_changed = 'never'
-  let g:ale_virtualtext_cursor = 0
-  let g:ale_fix_on_save = 1
-  " all of the linters need to be installed in order to work. ALE will not warn
-  " if they are enabled but not installed. Some of the Go linters come with the
-  " Go installation (e.g. gofmt) but others need to be installed separately.
-  let g:ale_linters = {
-  \   'go': ['golangci-lint', 'gopls', 'gofmt', 'govet', 'goimports'],
-  \   'ruby': ['rubocop'],
-  \}
-  let g:ale_fixers = {
-  \   '*': ['remove_trailing_lines', 'trim_whitespace'],
-  \   'go': ['gofmt', 'goimports'],
-  \   'jsonnet': ['jsonnetfmt'],
-  \   'markdown': ['prettier', 'trim_whitespace', 'remove_trailing_lines'],
-  \   'python': ['black'],
-  \}
-  " NOTE: fixing legacy code sometimes results in huge diffs. don't
-  " automatically fix often-legacy filetypes. can re-enable these as needed:
-  " \   'html': ['prettier'],
-  " \   'javascript': ['prettier'],
-  " \   'typescript': ['prettier'], " large diffs with legacy code
-  " \   'yaml': ['prettier'],
-
-  " nvim-cmp
-  set completeopt=menu,menuone,noselect
-  set pumheight=10
-
-  " Bullets.vim TODO move this in to lazy config
-  let g:bullets_enabled_file_types = [ 'markdown', 'markdown.mdnotes' ]
-  autocmd Filetype markdown,markdown.mdnotes inoremap <Tab> <Plug>(bullets-demote)
-  autocmd Filetype markdown,markdown.mdnotes inoremap <S-Tab> <Plug>(bullets-promote)
-  " an imperfect solution for inserting bullets above the current line. doesn't
-  " work for the top bullet in a list.
-  autocmd Filetype markdown,markdown.mdnotes nmap O k<Plug>(bullets-newline)
-  let g:bullets_outline_levels = ['ROM', 'ABC', 'num', 'abc', 'rom', 'std-']
-
-
-  " disable vim-jsonnet formatting. ALE takes care of it.
-  let g:jsonnet_fmt_on_save = 0
 
   " SETTINGS AND MISCELLANEOUS ###################################################
 
