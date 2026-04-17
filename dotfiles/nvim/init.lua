@@ -97,6 +97,7 @@ require('lazy').setup({
       -- disable alphabetic lists.
       vim.g.bullets_max_alpha_characters = 0
       vim.g.bullets_enabled_file_types = { 'markdown', 'markdown.mdnotes' }
+      vim.g.bullets_outline_levels = { 'ROM', 'ABC', 'num', 'abc', 'rom', 'std-' }
       vim.api.nvim_create_autocmd("FileType", {
         pattern = { "markdown", "markdown.mdnotes" },
         callback = function(ev)
