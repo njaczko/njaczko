@@ -47,7 +47,6 @@ require('lazy').setup({
         jsonnet = { 'jsonnetfmt' },
         markdown = { 'prettier', 'trim_whitespace', 'remove_trailing_lines' },
         python = { 'black' },
-        yaml = { 'prettier' },
       }
       vim.g.jsonnet_fmt_on_save = 0 -- disable vim-jsonnet formatting. ALE takes care of it.
     end
@@ -164,9 +163,16 @@ require('lazy').setup({
   },
   {'stevearc/oil.nvim', cmd = 'Oil', opts = {}},
   'mracos/mermaid.vim',
-  -- {'google/vim-jsonnet',  ft = 'jsonnet' },
-  -- 'leafgarland/typescript-vim',
-  -- {'mbbill/undotree',  cmd = 'UndotreeToggle' },
+  {
+    -- A low-tech but also less powerful alternative approach is: `command Center 40vsplit empty`
+    "shortcuts/no-neck-pain.nvim",
+    config = function()
+      require("no-neck-pain").setup({
+        autocmds = { skipEnteringNoNeckPainBuffer = true }, buffers = { right = { enabled = false } },
+      })
+      vim.api.nvim_create_user_command('Center', 'NoNeckPain', {})
+    end
+  },
 })
 
 vim.lsp.config['gopls'] = {
@@ -331,10 +337,6 @@ vim.cmd([[
   " do not redraw for commands that were not typed (e.g. mapping that enters
   " visual mode and highlights)
   set lazyredraw
-
-  " open an empty 40 column buffer to roughly center the current buffer on wide
-  " displays
-  command Center 40vsplit empty
 
   " convert fancy bullet characters to dashes
   command FmtBullets %s/•\|◦\|▸\|▹\|▪\|▫/-/g
