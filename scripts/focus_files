@@ -55,12 +55,16 @@ exit_if_no_storage() {
   [ -s "$storage_file" ] || exit
 }
 
+open_files() {
+  # ignore lines in the storage file that start with `#`
+  sed '/^#/d' < "$storage_file" | xargs "$editor_cmd"
+}
+
 main() {
   if [ $# -eq 0 ]; then
     exit_if_no_storage
 
-    # ignore lines in the storage file that start with `#`
-    sed '/^#/d' < "$storage_file" | xargs "$editor_cmd"
+    open_files
     exit
   fi
 
@@ -78,6 +82,7 @@ main() {
       echo "$PWD/$1" > "$storage_file"
       shift
       add_relative_paths "$@"
+      open_files
       ;;
     set-absolute)
       shift
@@ -92,6 +97,7 @@ main() {
       echo "$1" > "$storage_file"
       shift
       add_absolute_paths "$@"
+      open_files
       ;;
     add)
       shift
@@ -112,6 +118,7 @@ main() {
     edit)
       shift
       $editor_cmd "$storage_file"
+      open_files
       ;;
     help | *)
       usage

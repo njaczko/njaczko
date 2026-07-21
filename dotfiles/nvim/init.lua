@@ -73,7 +73,10 @@ require('lazy').setup({
     lazy = false,
     build = ':TSUpdate',
     config = function()
-      require('nvim-treesitter').install { 'go', 'gomod', 'gosum', 'hcl', 'jsonnet', 'ruby', 'sql', 'json', 'powershell' }
+      require('nvim-treesitter').install {
+        'go', 'gomod', 'gosum', 'hcl', 'jsonnet', 'ruby', 'sql', 'json',
+        'powershell', 'bash', 'zsh', 'java', 'python', 'yaml',
+      }
       vim.api.nvim_create_autocmd( 'FileType', {
         callback = function(ev)
           pcall(vim.treesitter.start, ev.buf)
@@ -93,8 +96,7 @@ require('lazy').setup({
     'dkarter/bullets.vim', -- automatic bullet list formatting
     ft = 'markdown',
     config = function()
-      -- disable alphabetic lists.
-      vim.g.bullets_max_alpha_characters = 0
+      vim.g.bullets_max_alpha_characters = 0 -- disable alphabetic lists.
       vim.g.bullets_enabled_file_types = { 'markdown', 'markdown.mdnotes' }
       vim.g.bullets_outline_levels = { 'ROM', 'ABC', 'num', 'abc', 'rom', 'std-' }
       vim.api.nvim_create_autocmd("FileType", {
@@ -310,6 +312,9 @@ vim.cmd([[
   command Spell set spell
   " turn off spell checking
   command Nospell set spell &
+  " accept the top spelling suggestion
+  command FixSpell normal! 1z=
+
   command StripWhitespace %s/\s\+$//e
   command Wrap set wrap
   command Nowrap set nowrap
@@ -377,16 +382,19 @@ vim.cmd([[
   let g:loaded_matchparen=1
   NoMatchParen
 
+  " TODO trying a simpler life
+  set number
   " hybrid relative line numbers, except in terminal mode.
-  set number relativenumber
-  augroup numbertoggle
-    autocmd!
-    autocmd BufEnter,FocusGained,InsertLeave * if &buftype != 'terminal' | set relativenumber | endif
-    autocmd BufLeave,FocusLost,InsertEnter   * if &buftype != 'terminal' | set norelativenumber | endif
-  augroup END
+  "set number relativenumber
+  "augroup numbertoggle
+  "  autocmd!
+  "  autocmd BufEnter,FocusGained,InsertLeave * if &buftype != 'terminal' | set relativenumber | endif
+  "  autocmd BufLeave,FocusLost,InsertEnter   * if &buftype != 'terminal' | set norelativenumber | endif
+  "augroup END
 
   abbreviate TOOD TODO
   abbreviate adn and
+  abbreviate auht auth
   abbreviate exaclty exactly
   abbreviate iferr if err != nil {<CR><Left>
   abbreviate ot to

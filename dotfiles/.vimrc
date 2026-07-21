@@ -1,5 +1,4 @@
 autocmd Filetype * setlocal tabstop=2 expandtab shiftwidth=2 smarttab
-autocmd Filetype notes,rst setlocal tabstop=3 shiftwidth=3 expandtab
 autocmd Filetype c,go,python,typescript setlocal tabstop=4 expandtab shiftwidth=4 smarttab
 autocmd FileType make set noexpandtab
 
